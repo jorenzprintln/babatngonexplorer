@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { dashboard, login, register } from '@/routes';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import HeroSection from '@/components/HeroSection.vue';
 import ResortCards from '@/components/ResortCards.vue';
 import CommentsSection from '@/components/CommentsSection.vue';
 import Footer from '@/components/Footer.vue';
+import { computed } from 'vue';
 
 withDefaults(
     defineProps<{
@@ -14,6 +15,9 @@ withDefaults(
         canRegister: true,
     },
 );
+
+const page = usePage();
+const isAuthenticated = computed(() => !!page.props.auth?.user);
 
 const reloadPage = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -26,7 +30,7 @@ const reloadPage = () => {
 <template>
     <Head title="Babatngon Explorer - Discover Hidden Gems">
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
     </Head>
     
@@ -49,7 +53,7 @@ const reloadPage = () => {
                 <!-- Auth Buttons -->
                 <div class="flex items-center gap-3">
                     <Link
-                        v-if="$page.props.auth.user"
+                        v-if="isAuthenticated"
                         :href="dashboard()"
                         class="rounded-full bg-slate-800 px-6 py-2 text-sm font-semibold text-white transition-all hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600"
                     >

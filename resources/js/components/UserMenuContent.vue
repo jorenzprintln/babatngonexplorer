@@ -6,7 +6,6 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { logout } from '@/routes';
 import { edit } from '@/routes/profile';
 import type { User } from '@/types';
 import { Link, router } from '@inertiajs/vue3';
@@ -17,7 +16,13 @@ interface Props {
 }
 
 const handleLogout = () => {
-    router.flushAll();
+    // Fortify's default logout endpoint is '/logout'
+    router.post('/logout', {}, {
+        onFinish: () => {
+            // Force a full page reload after logout completes
+            window.location.href = '/';
+        }
+    });
 };
 
 defineProps<Props>();
@@ -39,16 +44,15 @@ defineProps<Props>();
         </DropdownMenuItem>
     </DropdownMenuGroup>
     <DropdownMenuSeparator />
-    <DropdownMenuItem :as-child="true">
-        <Link
-            class="block w-full"
-            :href="logout()"
+    <DropdownMenuItem>
+        <button
+            class="flex w-full items-center"
             @click="handleLogout"
-            as="button"
             data-test="logout-button"
+            type="button"
         >
             <LogOut class="mr-2 h-4 w-4" />
             Log out
-        </Link>
+        </button>
     </DropdownMenuItem>
 </template>

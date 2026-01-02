@@ -13,16 +13,17 @@ import {
 } from '@/components/ui/sidebar';
 import { usePage } from '@inertiajs/vue3';
 import { ChevronsUpDown } from 'lucide-vue-next';
+import { computed } from 'vue';
 import UserMenuContent from './UserMenuContent.vue';
 
 const page = usePage();
-const user = page.props.auth.user;
+const user = computed(() => page.props.auth?.user);
 const { isMobile, state } = useSidebar();
 </script>
 
 <template>
     <SidebarMenu>
-        <SidebarMenuItem>
+        <SidebarMenuItem v-if="user">
             <DropdownMenu>
                 <DropdownMenuTrigger as-child>
                     <SidebarMenuButton
@@ -49,6 +50,18 @@ const { isMobile, state } = useSidebar();
                     <UserMenuContent :user="user" />
                 </DropdownMenuContent>
             </DropdownMenu>
+        </SidebarMenuItem>
+        
+        <!-- Fallback when user is not available -->
+        <SidebarMenuItem v-else>
+            <SidebarMenuButton
+                size="lg"
+                class="cursor-default"
+            >
+                <div class="grid flex-1 text-left text-sm leading-tight">
+                    <span class="truncate font-medium text-muted-foreground">Loading...</span>
+                </div>
+            </SidebarMenuButton>
         </SidebarMenuItem>
     </SidebarMenu>
 </template>

@@ -12,6 +12,7 @@ import { Link, usePage } from '@inertiajs/vue3';
 
 defineProps<{
     items: NavItem[];
+    exploreItems?: NavItem[];
 }>();
 
 const page = usePage();
@@ -22,6 +23,25 @@ const page = usePage();
         <SidebarGroupLabel>Platform</SidebarGroupLabel>
         <SidebarMenu>
             <SidebarMenuItem v-for="item in items" :key="item.title">
+                <SidebarMenuButton
+                    as-child
+                    :is-active="urlIsActive(item.href, page.url)"
+                    :tooltip="item.title"
+                >
+                    <Link :href="item.href">
+                        <component :is="item.icon" />
+                        <span>{{ item.title }}</span>
+                    </Link>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+        </SidebarMenu>
+    </SidebarGroup>
+
+    <!-- Explore Section -->
+    <SidebarGroup v-if="exploreItems" class="px-2 py-0">
+        <SidebarGroupLabel>Explore</SidebarGroupLabel>
+        <SidebarMenu>
+            <SidebarMenuItem v-for="item in exploreItems" :key="item.title">
                 <SidebarMenuButton
                     as-child
                     :is-active="urlIsActive(item.href, page.url)"
