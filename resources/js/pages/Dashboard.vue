@@ -228,9 +228,9 @@ const recentActivity = ref([
                     <div class="space-y-6 lg:col-span-2">
                         <div class="flex items-center justify-between">
                             <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Recently Viewed</h2>
-                            <button class="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400">
+                            <a href="/places" class="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400">
                                 View All →
-                            </button>
+                            </a>
                         </div>
 
                         <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -296,12 +296,14 @@ const recentActivity = ref([
                                     <p class="mb-6 max-w-md text-blue-50">
                                         Explore pristine beaches, hidden waterfalls, and serene resorts waiting to be discovered in Babatngon.
                                     </p>
-                                    <button class="flex items-center gap-2 rounded-xl bg-white px-6 py-3 font-semibold text-blue-600 transition-colors duration-300 hover:bg-blue-50">
-                                        Explore Babatngon
+                                    <a href="/places" 
+                                        class="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 font-semibold text-blue-600 transition-colors duration-300 hover:bg-blue-50">
+                                            Explore Babatngon
                                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                                         </svg>
-                                    </button>
+                                    </a>
+
                                 </div>
                                 <div class="hidden md:block">
                                     <svg class="h-32 w-32 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">

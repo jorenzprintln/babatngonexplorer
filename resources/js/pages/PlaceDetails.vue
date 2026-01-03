@@ -1,21 +1,18 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { type BreadcrumbItem } from '@/types';
 import { dashboard } from '@/routes';
 
-// Extend Window interface for Google Maps
 declare global {
   interface Window {
     google: any;
   }
 }
 
-// Get google from window
 const google: any = window.google;
 
-// Interfaces
 interface Place {
   id: number;
   name: string;
@@ -35,10 +32,14 @@ interface Place {
 
 interface Review {
   id: number;
+  user_id: number;
   user_name: string;
   rating: number;
   comment: string;
+  photos: string[];
   created_at: string;
+  reports_count: number;
+  has_reported: boolean;
 }
 
 interface AuthUser {
@@ -56,10 +57,8 @@ interface Props {
   auth: Auth;
 }
 
-// Props from backend
 const props = defineProps<Props>();
 
-// Breadcrumbs
 const breadcrumbs = computed<BreadcrumbItem[]>(() => [
   {
     title: 'Dashboard',
@@ -76,7 +75,6 @@ const breadcrumbs = computed<BreadcrumbItem[]>(() => [
 ]);
 
 // State
-const isSaved = ref<boolean>(false);
 const currentImageIndex = ref<number>(0);
 const userRating = ref<number>(0);
 const userComment = ref<string>('');
@@ -91,7 +89,23 @@ const directionsRenderer = ref<any | null>(null);
 const distance = ref<string>('');
 const duration = ref<string>('');
 
-// Computed
+// Photo upload state
+const selectedPhotos = ref<File[]>([]);
+const photoPreviewUrls = ref<string[]>([]);
+const photoInput = ref<HTMLInputElement | null>(null);
+
+// Report modal state
+const showReportModal = ref<boolean>(false);
+const reportingReviewId = ref<number | null>(null);
+const reportReason = ref<string>('');
+const reportDescription = ref<string>('');
+const isSubmittingReport = ref<boolean>(false);
+
+// Photo viewer state
+const showPhotoViewer = ref<boolean>(false);
+const viewerPhotos = ref<string[]>([]);
+const viewerCurrentIndex = ref<number>(0);
+
 const displayReviews = computed<Review[]>(() => props.reviews);
 const userInitials = computed<string>(() => {
   if (!props.auth.user) return 'G';
@@ -103,19 +117,124 @@ const userInitials = computed<string>(() => {
     .slice(0, 2);
 });
 
-// Place coordinates (you should get these from backend)
 const placeLocation = computed<{ lat: number; lng: number }>(() => ({
   lat: props.place.latitude || 14.6760,
   lng: props.place.longitude || 121.0437
 }));
 
-// Methods
+// Image Gallery Methods
 const nextImage = (): void => {
   currentImageIndex.value = (currentImageIndex.value + 1) % props.place.images.length;
 };
 
 const prevImage = (): void => {
   currentImageIndex.value = (currentImageIndex.value - 1 + props.place.images.length) % props.place.images.length;
+};
+
+// Photo Upload Methods
+const handlePhotoSelect = (event: Event): void => {
+  const target = event.target as HTMLInputElement;
+  const files = target.files;
+  
+  if (!files) return;
+  
+  const newFiles = Array.from(files).slice(0, 5 - selectedPhotos.value.length);
+  
+  newFiles.forEach(file => {
+    if (file.size > 5 * 1024 * 1024) {
+      alert(`${file.name} is too large. Maximum size is 5MB.`);
+      return;
+    }
+    
+    selectedPhotos.value.push(file);
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (e.target?.result) {
+        photoPreviewUrls.value.push(e.target.result as string);
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+  
+  // Reset input
+  if (target) target.value = '';
+};
+
+const removePhoto = (index: number): void => {
+  selectedPhotos.value.splice(index, 1);
+  photoPreviewUrls.value.splice(index, 1);
+};
+
+// Photo Viewer Methods
+const openPhotoViewer = (photos: string[], index: number): void => {
+  viewerPhotos.value = photos;
+  viewerCurrentIndex.value = index;
+  showPhotoViewer.value = true;
+};
+
+const closePhotoViewer = (): void => {
+  showPhotoViewer.value = false;
+  viewerPhotos.value = [];
+  viewerCurrentIndex.value = 0;
+};
+
+const nextViewerPhoto = (): void => {
+  viewerCurrentIndex.value = (viewerCurrentIndex.value + 1) % viewerPhotos.value.length;
+};
+
+const prevViewerPhoto = (): void => {
+  viewerCurrentIndex.value = (viewerCurrentIndex.value - 1 + viewerPhotos.value.length) % viewerPhotos.value.length;
+};
+
+// Report Methods
+const openReportModal = (reviewId: number): void => {
+  reportingReviewId.value = reviewId;
+  showReportModal.value = true;
+  reportReason.value = '';
+  reportDescription.value = '';
+};
+
+const closeReportModal = (): void => {
+  showReportModal.value = false;
+  reportingReviewId.value = null;
+  reportReason.value = '';
+  reportDescription.value = '';
+};
+
+const submitReport = (): void => {
+  if (!reportReason.value) {
+    alert('Please select a reason for reporting');
+    return;
+  }
+  
+  isSubmittingReport.value = true;
+  
+  router.post(
+    `/reviews/${reportingReviewId.value}/report`,
+    {
+      reason: reportReason.value,
+      description: reportDescription.value,
+    },
+    {
+      preserveScroll: true,
+      onSuccess: () => {
+        closeReportModal();
+        alert('Thank you for your report. We will review it shortly.');
+        router.reload({ only: ['reviews'] });
+      },
+      onError: (errors: any) => {
+        if (errors.report) {
+          alert(errors.report);
+        } else {
+          alert('Failed to submit report. Please try again.');
+        }
+      },
+      onFinish: () => {
+        isSubmittingReport.value = false;
+      },
+    }
+  );
 };
 
 const formatDate = (dateString: string): string => {
@@ -151,24 +270,42 @@ const handleSubmitReview = (): void => {
     return;
   }
 
+  if (userComment.value.trim().length < 10) {
+    alert('Comment must be at least 10 characters long');
+    return;
+  }
+
   isSubmitting.value = true;
+
+  const formData = new FormData();
+  formData.append('rating', userRating.value.toString());
+  formData.append('comment', userComment.value);
+  
+  selectedPhotos.value.forEach((photo, index) => {
+    formData.append(`photos[${index}]`, photo);
+  });
 
   router.post(
     `/places/${props.place.id}/reviews`,
-    {
-      rating: userRating.value,
-      comment: userComment.value,
-    },
+    formData,
     {
       preserveScroll: true,
+      forceFormData: true,
       onSuccess: () => {
         userRating.value = 0;
         userComment.value = '';
-        alert('Review submitted successfully!');
+        selectedPhotos.value = [];
+        photoPreviewUrls.value = [];
+        alert('Thank you for sharing your experience! Your review helps others discover this amazing place.');
+        router.reload({ only: ['place', 'reviews'] });
       },
       onError: (errors: any) => {
         console.error('Error submitting review:', errors);
-        alert('Failed to submit review. Please try again.');
+        if (errors.review) {
+          alert(errors.review);
+        } else {
+          alert('Failed to submit review. Please check your input and try again.');
+        }
       },
       onFinish: () => {
         isSubmitting.value = false;
@@ -177,17 +314,7 @@ const handleSubmitReview = (): void => {
   );
 };
 
-const toggleSave = (): void => {
-  isSaved.value = !isSaved.value;
-  
-  if (isSaved.value) {
-    console.log('Place saved!');
-  } else {
-    console.log('Place unsaved!');
-  }
-};
-
-// Initialize Google Map
+// Map Methods
 const initMap = (): void => {
   if (!mapContainer.value) return;
 
@@ -199,7 +326,6 @@ const initMap = (): void => {
     fullscreenControl: true,
   });
 
-  // Add marker for the place
   new google.maps.Marker({
     position: placeLocation.value,
     map: map.value,
@@ -209,7 +335,6 @@ const initMap = (): void => {
     }
   });
 
-  // Initialize directions service
   directionsService.value = new google.maps.DirectionsService();
   directionsRenderer.value = new google.maps.DirectionsRenderer({
     map: map.value,
@@ -217,7 +342,6 @@ const initMap = (): void => {
   });
 };
 
-// Get user's current location
 const getUserLocation = (): void => {
   if (!navigator.geolocation) {
     locationError.value = 'Geolocation is not supported by your browser';
@@ -235,7 +359,6 @@ const getUserLocation = (): void => {
       };
       isLoadingLocation.value = false;
       
-      // Show directions automatically when location is obtained
       if (userLocation.value) {
         showDirections();
       }
@@ -264,55 +387,6 @@ const getUserLocation = (): void => {
   );
 };
 
-// Ask user and open Google Maps directions in a new tab (uses popup opened during click)
-const handleGetDirectionsClick = (): void => {
-  const confirmOpen = confirm('Open directions in Google Maps (will open a new tab)?');
-
-  if (!confirmOpen) {
-    // User declined — proceed with in-page location/directions flow
-    getUserLocation();
-    return;
-  }
-
-  // Open popup synchronously (allowed because this is in a click handler)
-  const popup = window.open('', '_blank');
-  if (!popup) {
-    alert('Popup blocked. Please allow popups for this site to open directions.');
-    return;
-  }
-
-  // Try to get geolocation, then set popup location to Google Maps directions URL.
-  // If geolocation fails or times out, open directions with destination only.
-  const dest = `${placeLocation.value.lat},${placeLocation.value.lng}`;
-  const openMapsWithOrigin = (origin?: string) => {
-    const params = new URLSearchParams();
-    if (origin) params.set('origin', origin);
-    params.set('destination', dest);
-    params.set('travelmode', 'driving');
-    popup.location.href = `https://www.google.com/maps/dir/?api=1&${params.toString()}`;
-  };
-
-  if (!navigator.geolocation) {
-    openMapsWithOrigin();
-    return;
-  }
-
-  isLoadingLocation.value = true;
-  navigator.geolocation.getCurrentPosition(
-    (position: GeolocationPosition) => {
-      isLoadingLocation.value = false;
-      const origin = `${position.coords.latitude},${position.coords.longitude}`;
-      openMapsWithOrigin(origin);
-    },
-    () => {
-      isLoadingLocation.value = false;
-      openMapsWithOrigin();
-    },
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-  );
-};
-
-// Fallback: open Google Maps directions in a new tab
 const openExternalDirections = (): void => {
   const dest = `${placeLocation.value.lat},${placeLocation.value.lng}`;
   const params = new URLSearchParams();
@@ -325,20 +399,16 @@ const openExternalDirections = (): void => {
   window.open(url, '_blank');
 };
 
-// Show directions from user location to place
 const showDirections = (): void => {
-  // If we don't have a user location yet, open external directions (Google Maps can use device location)
   if (!userLocation.value) {
     openExternalDirections();
     return;
   }
 
-  // If DirectionsService/Renderer aren't available (e.g. billing disabled), fallback
   if (!directionsService.value || !directionsRenderer.value) {
     openExternalDirections();
     return;
   }
-
 
   const request: any = {
     origin: userLocation.value,
@@ -350,14 +420,12 @@ const showDirections = (): void => {
     if (status === 'OK' && result) {
       directionsRenderer.value?.setDirections(result);
       
-      // Get distance and duration
       const route = result.routes[0];
       if (route.legs[0]) {
         distance.value = route.legs[0].distance?.text || '';
         duration.value = route.legs[0].duration?.text || '';
       }
 
-      // Add custom marker for user location
       new google.maps.Marker({
         position: userLocation.value!,
         map: map.value,
@@ -368,14 +436,12 @@ const showDirections = (): void => {
       });
     } else {
       console.warn('Directions request failed:', status, result);
-      // fallback to external Google Maps directions
       openExternalDirections();
       locationError.value = 'Could not calculate route via API — opened external Google Maps.';
     }
   });
 };
 
-// Clear directions and reset map
 const clearDirections = (): void => {
   if (directionsRenderer.value) {
     directionsRenderer.value.setDirections({ routes: [] } as any);
@@ -385,14 +451,12 @@ const clearDirections = (): void => {
   duration.value = '';
   locationError.value = '';
   
-  // Re-center map on place
   if (map.value) {
     map.value.setCenter(placeLocation.value);
     map.value.setZoom(15);
   }
 };
 
-// Load Google Maps script
 const loadGoogleMapsScript = (): Promise<void> => {
   return new Promise<void>((resolve, reject) => {
     if (window.google && window.google.maps) {
@@ -444,10 +508,8 @@ onMounted(async () => {
           class="w-full h-full object-cover"
         />
         
-        <!-- Gradient Overlay -->
         <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
         
-        <!-- Navigation Arrows -->
         <template v-if="place.images.length > 1">
           <button
             @click="prevImage"
@@ -467,7 +529,6 @@ onMounted(async () => {
           </button>
         </template>
 
-        <!-- Image Counter -->
         <div class="absolute bottom-4 right-4 rounded-full bg-black/50 px-3 py-1 text-sm text-white backdrop-blur-sm">
           <svg class="inline h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -476,7 +537,6 @@ onMounted(async () => {
           {{ currentImageIndex + 1 }} / {{ place.images.length }}
         </div>
 
-        <!-- Place Info Overlay -->
         <div class="absolute bottom-0 left-0 right-0 p-6 md:p-8">
           <div class="mx-auto max-w-6xl">
             <div class="flex items-start justify-between">
@@ -495,27 +555,6 @@ onMounted(async () => {
                   <span class="text-lg">{{ place.location }}</span>
                 </div>
               </div>
-              
-              <!-- Save Button -->
-              <button
-                @click="toggleSave"
-                :class="[
-                  'rounded-full p-3 backdrop-blur-sm transition-all duration-300 transform hover:scale-110',
-                  isSaved
-                    ? 'bg-red-500 text-white shadow-lg shadow-red-500/50'
-                    : 'bg-white/20 text-white hover:bg-white/30'
-                ]"
-              >
-                <svg 
-                  class="h-6 w-6 transition-all duration-300" 
-                  :class="{ 'fill-current': isSaved }" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
-              </button>
             </div>
           </div>
         </div>
@@ -651,7 +690,8 @@ onMounted(async () => {
               <button
                 v-else
                 @click="clearDirections"
-                class="flex items-center gap-2 rounded-lg bg-gray-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-700"
+                class="flex items-center gap-2
+                rounded-lg bg-gray-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-700"
               >
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -661,7 +701,6 @@ onMounted(async () => {
             </div>
           </div>
 
-          <!-- Distance and Duration Info -->
           <div v-if="distance && duration" class="mb-4 flex gap-4">
             <div class="flex items-center gap-2 rounded-lg bg-teal-50 px-4 py-2 dark:bg-teal-900/20">
               <svg class="h-5 w-5 text-teal-600 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -677,7 +716,6 @@ onMounted(async () => {
             </div>
           </div>
 
-          <!-- Error Message -->
           <div v-if="locationError" class="mb-4 rounded-lg bg-red-50 p-4 dark:bg-red-900/20">
             <div class="flex items-center gap-2">
               <svg class="h-5 w-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -687,7 +725,6 @@ onMounted(async () => {
             </div>
           </div>
 
-          <!-- Map Container -->
           <div ref="mapContainer" class="h-96 rounded-lg overflow-hidden mb-4"></div>
           
           <p class="flex items-start gap-2 text-gray-700 dark:text-gray-300">
@@ -732,22 +769,57 @@ onMounted(async () => {
                         {{ formatDate(review.created_at) }}
                       </p>
                     </div>
-                    <div class="flex items-center gap-1">
-                      <svg
-                        v-for="star in 5"
-                        :key="star"
-                        class="h-4 w-4"
-                        :class="star <= review.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300 dark:text-gray-600'"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
+                    <div class="flex items-center gap-2">
+                      <div class="flex items-center gap-1">
+                        <svg
+                          v-for="star in 5"
+                          :key="star"
+                          class="h-4 w-4"
+                          :class="star <= review.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300 dark:text-gray-600'"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                      </div>
+                      
+                      <!-- Report Button -->
+                      <button
+                        v-if="auth.user && auth.user.id !== review.user_id && !review.has_reported"
+                        @click="openReportModal(review.id)"
+                        class="flex items-center gap-1 text-sm text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 transition"
+                        title="Report this review"
                       >
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                        </svg>
+                        <span>Report</span>
+                      </button>
+                      
+                      <span v-if="review.has_reported" class="text-xs text-gray-400 dark:text-gray-500">
+                        Reported
+                      </span>
                     </div>
                   </div>
-                  <p class="text-gray-700 dark:text-gray-300">
+                  <p class="text-gray-700 dark:text-gray-300 mb-3">
                     {{ review.comment }}
                   </p>
+                  
+                  <!-- Review Photos -->
+                  <div v-if="review.photos && review.photos.length > 0" class="flex flex-wrap gap-2">
+                    <div
+                      v-for="(photo, index) in review.photos"
+                      :key="index"
+                      class="relative h-24 w-24 cursor-pointer overflow-hidden rounded-lg"
+                      @click="openPhotoViewer(review.photos, index)"
+                    >
+                      <img
+                        :src="photo"
+                        :alt="`Review photo ${index + 1}`"
+                        class="h-full w-full object-cover transition hover:scale-110"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -764,7 +836,7 @@ onMounted(async () => {
             <p class="text-gray-600 dark:text-gray-400 mb-4">
               Please login to leave a review
             </p>
-            <a
+          <a
               href="/login"
               class="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-6 py-3 font-semibold text-white transition hover:bg-teal-700"
             >
@@ -811,6 +883,63 @@ onMounted(async () => {
               />
             </div>
             
+            <!-- Photo Upload -->
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Add Photos (Optional - Max 5 photos, 5MB each)
+              </label>
+              
+              <input
+                ref="photoInput"
+                type="file"
+                accept="image/jpeg,image/jpg,image/png"
+                multiple
+                @change="handlePhotoSelect"
+                class="hidden"
+              />
+              
+              <div class="flex flex-wrap gap-3">
+                <!-- Photo Previews -->
+                <div
+                  v-for="(preview, index) in photoPreviewUrls"
+                  :key="index"
+                  class="relative h-24 w-24 overflow-hidden rounded-lg"
+                >
+                  <img
+                    :src="preview"
+                    alt="Preview"
+                    class="h-full w-full object-cover"
+                  />
+                  <button
+                    @click="removePhoto(index)"
+                    type="button"
+                    class="absolute top-1 right-1 rounded-full bg-red-500 p-1 text-white hover:bg-red-600 transition"
+                  >
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                
+                <!-- Add Photo Button -->
+                <button
+                  v-if="selectedPhotos.length < 5"
+                  @click="photoInput?.click()"
+                  type="button"
+                  class="flex h-24 w-24 items-center justify-center rounded-lg border-2 border-dashed border-gray-300 hover:border-teal-500 transition dark:border-gray-600"
+                  :disabled="isSubmitting"
+                >
+                  <svg class="h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                  </svg>
+                </button>
+              </div>
+              
+              <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                {{ selectedPhotos.length }} / 5 photos selected
+              </p>
+            </div>
+            
             <button
               @click="handleSubmitReview"
               :disabled="isSubmitting"
@@ -829,6 +958,127 @@ onMounted(async () => {
         </div>
       </div>
     </div>
+    
+    <!-- Report Modal -->
+    <Teleport to="body">
+      <div
+        v-if="showReportModal"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+        @click.self="closeReportModal"
+      >
+        <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-800">
+          <div class="mb-4 flex items-center justify-between">
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white">
+              Report Review
+            </h3>
+            <button
+              @click="closeReportModal"
+              class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          <div class="space-y-4">
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Reason for reporting
+              </label>
+              <select
+                v-model="reportReason"
+                class="w-full rounded-lg border border-gray-300 p-3 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              >
+                <option value="">Select a reason</option>
+                <option value="spam">Spam</option>
+                <option value="inappropriate">Inappropriate content</option>
+                <option value="offensive">Offensive language</option>
+                <option value="misleading">Misleading information</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Additional details (optional)
+              </label>
+              <textarea
+                v-model="reportDescription"
+                rows="3"
+                class="w-full rounded-lg border border-gray-300 p-3 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                placeholder="Provide more context..."
+                maxlength="500"
+              />
+            </div>
+            
+            <div class="flex gap-3">
+              <button
+                @click="closeReportModal"
+                class="flex-1 rounded-lg border border-gray-300 px-4 py-2 font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                @click="submitReport"
+                :disabled="isSubmittingReport || !reportReason"
+                class="flex-1 rounded-lg bg-red-600 px-4 py-2 font-semibold text-white transition hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {{ isSubmittingReport ? 'Submitting...' : 'Submit Report' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+    
+    <!-- Photo Viewer Modal -->
+    <Teleport to="body">
+      <div
+        v-if="showPhotoViewer"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+        @click.self="closePhotoViewer"
+      >
+        <button
+          @click="closePhotoViewer"
+          class="absolute top-4 right-4 rounded-full bg-white/10 p-2 text-white backdrop-blur-sm transition hover:bg-white/20"
+        >
+          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+        
+        <button
+          v-if="viewerPhotos.length > 1"
+          @click="prevViewerPhoto"
+          class="absolute left-4 rounded-full bg-white/10 p-2 text-white backdrop-blur-sm transition hover:bg-white/20"
+        >
+          <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        
+        <img
+          :src="viewerPhotos[viewerCurrentIndex]"
+          alt="Full size photo"
+          class="max-h-[90vh] max-w-[90vw] rounded-lg object-contain"
+        />
+        
+        <button
+          v-if="viewerPhotos.length > 1"
+          @click="nextViewerPhoto"
+          class="absolute right-4 rounded-full bg-white/10 p-2 text-white backdrop-blur-sm transition hover:bg-white/20"
+        >
+          <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+        
+        <div v-if="viewerPhotos.length > 1" class="absolute bottom-4 rounded-full bg-black/50 px-4 py-2 text-white backdrop-blur-sm">
+          {{ viewerCurrentIndex + 1 }} / {{ viewerPhotos.length }}
+        </div>
+      </div>
+    </Teleport>
   </AppLayout>
 </template>
 

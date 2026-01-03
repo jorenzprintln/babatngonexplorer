@@ -1,5 +1,15 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
+import { usePage } from '@inertiajs/vue3';
+
+// Get page props - usePage will use the global PageProps type
+const page = usePage();
+
+// Check if user is authenticated
+const isAuthenticated = computed(() => {
+  const user = page.props.auth?.user;
+  return user !== null && user !== undefined;
+});
 
 const resorts = ref([
   {
@@ -134,12 +144,15 @@ const resorts = ref([
             </div>
 
             <!-- Learn More Button -->
-            <button class="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-teal-500 px-4 py-2.5 text-sm font-semibold text-white transition-all duration-300 hover:from-blue-700 hover:to-teal-600 hover:shadow-lg">
-              Learn More
+            <a 
+              :href="isAuthenticated ? `/places/${resort.id}` : `/places/${resort.id}`"
+              class="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-teal-500 px-4 py-2.5 text-sm font-semibold text-white transition-all duration-300 hover:from-blue-700 hover:to-teal-600 hover:shadow-lg"
+            >
+                Learn More
               <svg class="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
               </svg>
-            </button>
+            </a>
           </div>
         </div>
       </div>

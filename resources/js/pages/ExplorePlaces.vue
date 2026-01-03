@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, Link } from '@inertiajs/vue3';
 import { type BreadcrumbItem } from '@/types';
 import { dashboard } from '@/routes';
-import { Link } from '@inertiajs/vue3';
+import axios from 'axios';
+
 const breadcrumbs: BreadcrumbItem[] = [
   {
     title: 'Dashboard',
@@ -16,84 +17,59 @@ const breadcrumbs: BreadcrumbItem[] = [
   },
 ];
 
+interface Place {
+  id: number;
+  name: string;
+  description: string;
+  location: string;
+  image: string;
+  rating: number;
+  type: string;
+  reviewCount: number;
+}
+
+interface Props {
+  places: Place[];
+}
+
+const props = defineProps<Props>();
+
 // Filter and search state
 const searchQuery = ref('');
 const selectedType = ref('All');
 const savedPlaces = ref<number[]>([]); // Store IDs of saved places
 
-// All places data
-const places = ref([
-  {
-    id: 1,
-    name: 'Tulaan Beach Resort',
-    description: 'Clean environment with rooms for overnight stay and a swimming pool.',
-    location: 'Barangay Bacong, Babatngon',
-    image: 'https://cdns.app/wgsdkw2F/assets/image/big/777a27a17c917b8b4d5a5d712d6a7145_1660367236.jpg',
-    rating: 4.8,
-    type: 'Resort',
-    reviewCount: 127
-  },
-  {
-    id: 2,
-    name: 'Balay ni Tatay',
-    description: 'Mountain-side resort with a pool, mini zoo, and hiking trails.',
-    location: 'Barangay Villa Magsaysay, Babatngon',
-    image: 'https://www.syramay.com/wp-content/uploads/2022/01/balay-ni-tatay-resort-1-768x434.jpg',
-    rating: 4.6,
-    type: 'Resort',
-    reviewCount: 89
-  },
-  {
-    id: 3,
-    name: 'Busay Falls',
-    description: 'Fresh waterfall flowing directly from the mountain, ideal for nature lovers.',
-    location: 'Barangay District III, Babatngon',
-    image: 'https://tse1.mm.bing.net/th/id/OIP.ikTtPHIwpDxg8XAXNcGTbgHaEK?pid=Api&P=0&h=220',
-    rating: 4.7,
-    type: 'Falls',
-    reviewCount: 156
-  },
-  {
-    id: 4,
-    name: 'Aplaya Beach',
-    description: 'Rocky sea area near the highway, perfect for quick visits and photos.',
-    location: 'Fishport, Babatngon',
-    image: 'https://i.ytimg.com/vi/Ypc1qBH3zJw/maxresdefault.jpg?sqp=-oaymwEmCIAKENAF8quKqQMa8AEB-AH-CYAC0AWKAgwIABABGFogXyhlMA8=&rs=AOn4CLAfBMnarUhnFz-D7ClGvCrL9aZMlg',
-    rating: 4.9,
-    type: 'Beach',
-    reviewCount: 203
-  },
-  {
-    id: 5,
-    name: 'Tulaan Beach',
-    description: 'Part of Tulaan Resort, with clear seawater and a relaxing beach environment.',
-    location: 'Barangay Bacong, Babatngon',
-    image: 'https://iamtravelinglight.com/wp-content/uploads/2012/05/326-tulaans-shore.jpg',
-    rating: 4.8,
-    type: 'Beach',
-    reviewCount: 142
-  },
-  {
-    id: 6,
-    name: 'Busay Resort',
-    description: 'Resort with a pool, waterfall, and slide for fun activities.',
-    location: 'Barangay District III, Babatngon',
-    image: 'https://scontent.fmnl4-8.fna.fbcdn.net/v/t39.30808-6/494899259_680194271484041_1610373663631108083_n.jpg?_nc_cat=104&ccb=1-7&_nc_sid=833d8&_nc_eui2=AeGGalUxo0dz0HhfhvE5QgVLhjT2qepivFCGNPap6mK8UGM7Jo1hlDX5IvvZ_YIdEgSy-FgisMhaOwsrxjebiMPy&_nc_ohc=i8exqn1kmFIQ7kNvwHe8pUI&_nc_oc=AdnPul01IyAOooK7hUJHqz9y3XBlvFdYeVuDJ7WPhTR9iWuJBbQLKlzhz8odUYqtC7s&_nc_zt=23&_nc_ht=scontent.fmnl4-8.fna&_nc_gid=R4r_7lfD3tPPn1AWGnXSgA&oh=00_AfoC7kaRsKuqjzOUbxDe2cXl9fplu92rmPJUwGIKavjU1Q&oe=695C0FC9',
-    rating: 4.5,
-    type: 'Resort',
-    reviewCount: 67
+// Load saved places from database on mount
+onMounted(async () => {
+  await loadSavedPlaces();
+});
+
+// Load saved places from database
+const loadSavedPlaces = async () => {
+  try {
+    const response = await axios.get('/api/saved-places');
+    savedPlaces.value = response.data;
+    // Also update localStorage for offline access
+    localStorage.setItem('savedPlaces', JSON.stringify(response.data));
+  } catch (error) {
+    console.error('Failed to load saved places:', error);
+    // Fallback to localStorage if API fails
+    const cached = localStorage.getItem('savedPlaces');
+    if (cached) {
+      savedPlaces.value = JSON.parse(cached);
+    }
   }
-]);
+};
 
 // Get unique types for filter
 const types = computed(() => {
-  const uniqueTypes = ['All', ...new Set(places.value.map(p => p.type))];
+  const uniqueTypes = ['All', ...new Set(props.places.map(p => p.type))];
   return uniqueTypes;
 });
 
 // Filtered places based on search and type
 const filteredPlaces = computed(() => {
-  return places.value.filter(place => {
+  return props.places.filter(place => {
     const matchesSearch = place.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
                          place.description.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
                          place.location.toLowerCase().includes(searchQuery.value.toLowerCase());
@@ -104,14 +80,40 @@ const filteredPlaces = computed(() => {
   });
 });
 
-// Toggle save/bookmark
-const toggleSave = (placeId: number) => {
-  const index = savedPlaces.value.indexOf(placeId);
-  if (index > -1) {
-    savedPlaces.value.splice(index, 1);
-  } else {
-    savedPlaces.value.push(placeId);
+// Toggle save/bookmark with database sync
+const showSaveToast = ref(false);
+const toastMessage = ref('');
+
+const toggleSave = async (placeId: number, placeName: string) => {
+  try {
+    // Call API to toggle save state
+    const response = await axios.post(`/api/saved-places/toggle/${placeId}`);
+    
+    // Update local state based on API response
+    if (response.data.saved) {
+      savedPlaces.value.push(placeId);
+      toastMessage.value = `Added ${placeName} to saved places`;
+    } else {
+      const index = savedPlaces.value.indexOf(placeId);
+      if (index > -1) {
+        savedPlaces.value.splice(index, 1);
+      }
+      toastMessage.value = `Removed ${placeName} from saved places`;
+    }
+    
+    // Update localStorage
+    localStorage.setItem('savedPlaces', JSON.stringify(savedPlaces.value));
+    
+  } catch (error) {
+    console.error('Failed to toggle save:', error);
+    toastMessage.value = 'Failed to update saved places. Please try again.';
   }
+  
+  // Show toast notification
+  showSaveToast.value = true;
+  setTimeout(() => {
+    showSaveToast.value = false;
+  }, 3000);
 };
 
 const isSaved = (placeId: number) => {
@@ -214,16 +216,16 @@ const isSaved = (placeId: number) => {
 
               <!-- Save/Bookmark Button -->
               <button
-                @click.stop="toggleSave(place.id)"
+                @click.prevent="toggleSave(place.id, place.name)"
                 :class="[
-                  'absolute right-4 top-4 rounded-full p-2 shadow-md backdrop-blur-sm transition-all duration-300',
+                  'absolute right-4 top-4 z-10 rounded-full p-2 shadow-md backdrop-blur-sm transition-all duration-300 cursor-pointer',
                   isSaved(place.id)
-                    ? 'bg-red-500 text-white scale-110'
-                    : 'bg-white/95 text-gray-600 hover:bg-white hover:scale-110 dark:bg-gray-900/95 dark:text-gray-300'
+                    ? 'bg-red-500 text-white scale-110 hover:bg-red-600 hover:scale-125'
+                    : 'bg-white/95 text-gray-600 hover:bg-white hover:scale-110 dark:bg-gray-900/95 dark:text-gray-300 dark:hover:bg-gray-800'
                 ]"
               >
                 <svg
-                  class="h-5 w-5"
+                  class="h-5 w-5 transition-all duration-300"
                   :class="{ 'fill-current': isSaved(place.id) }"
                   fill="none"
                   stroke="currentColor"
@@ -258,7 +260,9 @@ const isSaved = (placeId: number) => {
                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                   </svg>
                 </div>
-                <span class="text-sm font-bold text-gray-900 dark:text-white">{{ place.rating }}</span>
+                <span class="text-sm font-bold text-gray-900 dark:text-white">
+                  {{ place.rating > 0 ? place.rating.toFixed(1) : 'N/A' }}
+                </span>
                 <span class="text-xs text-gray-500 dark:text-gray-400">({{ place.reviewCount }})</span>
               </div>
 
@@ -288,20 +292,19 @@ const isSaved = (placeId: number) => {
 
               <!-- View Details Button -->
               <Link
-  :href="`/places/${place.id}`"
-  class="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-teal-600 to-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-all duration-300 hover:from-teal-700 hover:to-blue-700 hover:shadow-lg"
->
-  View Details
-  <svg
-    class="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1"
-    fill="none"
-    stroke="currentColor"
-    viewBox="0 0 24 24"
-  >
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-  </svg>
-</Link>
-
+                :href="`/places/${place.id}`"
+                class="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-teal-600 to-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-all duration-300 hover:from-teal-700 hover:to-blue-700 hover:shadow-lg"
+              >
+                View Details
+                <svg
+                  class="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
             </div>
           </div>
         </div>
@@ -320,8 +323,8 @@ const isSaved = (placeId: number) => {
           <p class="text-gray-600 dark:text-gray-400">Try adjusting your search or filters</p>
         </div>
 
-        <!-- Saved Places Counter (Optional) -->
-        <div v-if="savedPlaces.length > 0" class="mt-8 rounded-2xl bg-teal-50 p-6 dark:bg-teal-900/20">
+        <!-- Saved Places Counter -->
+        <div v-if="savedPlaces.length > 0" class="mt-8 rounded-2xl bg-gradient-to-r from-teal-50 to-blue-50 p-6 dark:from-teal-900/20 dark:to-blue-900/20">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
               <div class="rounded-full bg-teal-600 p-3">
@@ -343,13 +346,40 @@ const isSaved = (placeId: number) => {
                 </p>
               </div>
             </div>
-            <button class="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-teal-700">
+            <Link
+              href="/save"
+              class="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-teal-700"
+            >
               View Saved
-            </button>
+            </Link>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- Toast Notification -->
+    <Teleport to="body">
+      <Transition
+        enter-active-class="transition duration-300 ease-out"
+        enter-from-class="translate-y-2 opacity-0"
+        enter-to-class="translate-y-0 opacity-100"
+        leave-active-class="transition duration-200 ease-in"
+        leave-from-class="translate-y-0 opacity-100"
+        leave-to-class="translate-y-2 opacity-0"
+      >
+        <div
+          v-if="showSaveToast"
+          class="fixed bottom-8 left-1/2 z-50 -translate-x-1/2 transform"
+        >
+          <div class="flex items-center gap-3 rounded-lg bg-gray-900 px-6 py-3 text-white shadow-2xl dark:bg-gray-100 dark:text-gray-900">
+            <svg class="h-5 w-5 text-green-400 dark:text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <span class="font-medium">{{ toastMessage }}</span>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </AppLayout>
 </template>
 
