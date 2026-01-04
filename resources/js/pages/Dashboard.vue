@@ -5,6 +5,37 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, usePage } from '@inertiajs/vue3';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 
+interface Place {
+  id: number;
+  name: string;
+  location: string;
+  image: string;
+  type: string;
+  rating: number;
+}
+
+interface Stats {
+  savedPlaces: number;
+  reviewsSubmitted: number;
+  recentlyViewed: number;
+}
+
+interface Activity {
+  action: string;
+  place: string;
+  time: string;
+}
+
+interface Props {
+  stats: Stats;
+  recentPlaces: Place[];
+  memberSince: string;
+  reviewedPlacesCount: number;
+  recentActivity: Activity[];
+}
+
+const props = defineProps<Props>();
+
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Dashboard',
@@ -36,13 +67,10 @@ const backgroundStyle = computed(() => {
     let bgImage = '';
     
     if (tod === 'morning') {
-        // Morning: Rising sun background
         bgImage = 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&q=80';
     } else if (tod === 'afternoon') {
-        // Afternoon: Sunny sky background
         bgImage = 'https://images.unsplash.com/photo-1601297183305-6df142704ea2?w=1200&q=80';
     } else {
-        // Night: Moon and stars background
         bgImage = 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=1200&q=80';
     }
     
@@ -54,13 +82,8 @@ const backgroundStyle = computed(() => {
     };
 });
 
-const textColor = computed(() => {
-    return 'text-white';
-});
-
-const dateColor = computed(() => {
-    return 'text-white/90';
-});
+const textColor = computed(() => 'text-white');
+const dateColor = computed(() => 'text-white/90');
 
 const formattedDate = computed(() => {
     return currentTime.value.toLocaleDateString('en-US', {
@@ -95,62 +118,53 @@ onUnmounted(() => {
     }
 });
 
-const stats = ref([
+// Dynamic stats
+const statsCards = computed(() => [
   { 
     id: 1, 
     label: 'Saved Places', 
-    value: '12', 
+    value: props.stats.savedPlaces.toString(), 
     color: 'from-blue-500 to-teal-500',
     icon: 'bookmark'
   },
   { 
     id: 2, 
     label: 'Reviews Submitted', 
-    value: '8', 
+    value: props.stats.reviewsSubmitted.toString(), 
     color: 'from-teal-500 to-emerald-500',
     icon: 'message'
   },
   { 
     id: 3, 
     label: 'Recently Viewed', 
-    value: '24', 
+    value: props.stats.recentlyViewed.toString(), 
     color: 'from-emerald-500 to-green-500',
     icon: 'eye'
   }
 ]);
 
-const recentPlaces = ref([
-  {
-    id: 1,
-    name: 'Tulaan Beach Resort',
-    location: 'Barangay Bacong',
-    image: 'https://cdns.app/wgsdkw2F/assets/image/big/777a27a17c917b8b4d5a5d712d6a7145_1660367236.jpg',
-    type: 'Resort',
-    rating: 4.8
-  },
-  {
-    id: 2,
-    name: 'Busay Falls',
-    location: 'Barangay District III',
-    image: 'https://tse1.mm.bing.net/th/id/OIP.ikTtPHIwpDxg8XAXNcGTbgHaEK?pid=Api&P=0&h=220',
-    type: 'Falls',
-    rating: 4.7
-  },
-  {
-    id: 3,
-    name: 'Aplaya Beach',
-    location: 'Fishport, Babatngon',
-    image: 'https://i.ytimg.com/vi/Ypc1qBH3zJw/maxresdefault.jpg?sqp=-oaymwEmCIAKENAF8quKqQMa8AEB-AH-CYAC0AWKAgwIABABGFogXyhlMA8=&rs=AOn4CLAfBMnarUhnFz-D7ClGvCrL9aZMlg',
-    type: 'Beach',
-    rating: 4.9
-  }
-]);
+// Get activity icon based on action type
+const getActivityIcon = (action: string) => {
+  if (action === 'Reviewed') return 'message';
+  if (action === 'Saved') return 'bookmark';
+  if (action === 'Viewed') return 'eye';
+  return 'activity';
+};
 
-const recentActivity = ref([
-  { id: 1, action: 'Reviewed', place: 'Balay ni Tatay', time: '2 hours ago' },
-  { id: 2, action: 'Saved', place: 'Busay Resort', time: '5 hours ago' },
-  { id: 3, action: 'Viewed', place: 'Tulaan Beach', time: '1 day ago' }
-]);
+// Get activity color based on action type
+const getActivityColor = (action: string) => {
+  if (action === 'Reviewed') return 'bg-teal-50 dark:bg-teal-900/30';
+  if (action === 'Saved') return 'bg-blue-50 dark:bg-blue-900/30';
+  if (action === 'Viewed') return 'bg-purple-50 dark:bg-purple-900/30';
+  return 'bg-gray-50 dark:bg-gray-900/30';
+};
+
+const getActivityIconColor = (action: string) => {
+  if (action === 'Reviewed') return 'text-teal-600 dark:text-teal-400';
+  if (action === 'Saved') return 'text-blue-600 dark:text-blue-400';
+  if (action === 'Viewed') return 'text-purple-600 dark:text-purple-400';
+  return 'text-gray-600 dark:text-gray-400';
+};
 </script>
 
 <template>
@@ -193,7 +207,7 @@ const recentActivity = ref([
                 <!-- Stats Cards -->
                 <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
                     <div
-                        v-for="stat in stats"
+                        v-for="stat in statsCards"
                         :key="stat.id"
                         class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md dark:border-gray-800 dark:bg-gray-900"
                     >
@@ -233,10 +247,28 @@ const recentActivity = ref([
                             </a>
                         </div>
 
-                        <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-                            <div
+                        <!-- Empty State -->
+                        <div v-if="recentPlaces.length === 0" class="rounded-2xl bg-white p-12 text-center shadow-sm dark:bg-gray-800">
+                            <svg class="mx-auto mb-4 h-16 w-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            <h3 class="mb-2 text-xl font-semibold text-gray-900 dark:text-white">No places viewed yet</h3>
+                            <p class="text-gray-600 dark:text-gray-400 mb-4">Start exploring amazing destinations in Babatngon</p>
+                            <a href="/places" class="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-6 py-3 font-semibold text-white transition hover:bg-teal-700">
+                                Explore Places
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            </a>
+                        </div>
+
+                        <!-- Recently Viewed Places - Now displays 4 items -->
+                        <div v-else class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                            <a
                                 v-for="place in recentPlaces"
                                 :key="place.id"
+                                :href="`/places/${place.id}`"
                                 class="group overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg dark:border-gray-800 dark:bg-gray-900"
                             >
                                 <!-- Image -->
@@ -267,7 +299,7 @@ const recentActivity = ref([
                                                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                                             </svg>
                                         </div>
-                                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ place.rating }}</span>
+                                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ place.rating.toFixed(1) }}</span>
                                     </div>
 
                                     <h3 class="mb-2 text-lg font-bold text-gray-900 dark:text-white">{{ place.name }}</h3>
@@ -280,7 +312,7 @@ const recentActivity = ref([
                                         <span>{{ place.location }}</span>
                                     </div>
                                 </div>
-                            </div>
+                            </a>
                         </div>
 
                         <!-- Explore More Card -->
@@ -303,7 +335,6 @@ const recentActivity = ref([
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                                         </svg>
                                     </a>
-
                                 </div>
                                 <div class="hidden md:block">
                                     <svg class="h-32 w-32 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -318,13 +349,24 @@ const recentActivity = ref([
                     <div class="space-y-6">
                         <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Recent Activity</h2>
                         
-                        <div class="space-y-4 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-                            <template v-for="(activity, index) in recentActivity" :key="activity.id">
+                        <!-- Dynamic Recent Activity -->
+                        <div v-if="recentActivity.length > 0" class="space-y-4 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                            <template v-for="(activity, index) in recentActivity" :key="index">
                                 <div>
                                     <div class="flex items-start gap-4">
-                                        <div class="rounded-lg bg-blue-50 p-2 dark:bg-blue-900/30">
-                                            <svg class="h-5 w-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                                        <div :class="['rounded-lg p-2', getActivityColor(activity.action)]">
+                                            <!-- Reviewed Icon -->
+                                            <svg v-if="getActivityIcon(activity.action) === 'message'" :class="['h-5 w-5', getActivityIconColor(activity.action)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                                            </svg>
+                                            <!-- Saved Icon -->
+                                            <svg v-else-if="getActivityIcon(activity.action) === 'bookmark'" :class="['h-5 w-5', getActivityIconColor(activity.action)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                                            </svg>
+                                            <!-- Viewed Icon -->
+                                            <svg v-else-if="getActivityIcon(activity.action) === 'eye'" :class="['h-5 w-5', getActivityIconColor(activity.action)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                             </svg>
                                         </div>
                                         <div class="flex-1">
@@ -339,21 +381,29 @@ const recentActivity = ref([
                             </template>
                         </div>
 
-                        <!-- Quick Stats -->
-                        <div class="rounded-2xl border border-gray-100 p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 p-6 text-white">
+                        <!-- Empty Activity State -->
+                        <div v-else class="rounded-2xl border border-gray-100 bg-white p-8 text-center shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                            <svg class="mx-auto mb-3 h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">No recent activity</p>
+                        </div>
+
+                        <!-- Your Journey Stats - Updated with reviewedPlacesCount -->
+                        <div class="rounded-2xl bg-gradient-to-br from-teal-600 to-blue-600 p-6 shadow-lg text-white">
                             <h3 class="mb-4 text-lg font-bold">Your Journey</h3>
                             <div class="space-y-3">
                                 <div class="flex items-center justify-between">
                                     <span class="text-teal-50">Places Explored</span>
-                                    <span class="text-2xl font-bold">24</span>
+                                    <span class="text-2xl font-bold">{{ reviewedPlacesCount }}</span>
                                 </div>
                                 <div class="flex items-center justify-between">
                                     <span class="text-teal-50">Total Reviews</span>
-                                    <span class="text-2xl font-bold">8</span>
+                                    <span class="text-2xl font-bold">{{ stats.reviewsSubmitted }}</span>
                                 </div>
                                 <div class="flex items-center justify-between">
                                     <span class="text-teal-50">Member Since</span>
-                                    <span class="font-semibold">Dec 2024</span>
+                                    <span class="font-semibold">{{ memberSince }}</span>
                                 </div>
                             </div>
                         </div>

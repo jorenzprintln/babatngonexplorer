@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Review;
 use App\Models\ReviewReport;
+use App\Models\PlaceView;
 use App\Http\Services\PlaceService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -44,6 +45,9 @@ class PlaceController extends Controller
         if (!$place) {
             abort(404, 'Place not found');
         }
+
+        // Record the view
+        PlaceView::recordView($request->user()->id, $id);
 
         $reviews = $this->placeService->getFormattedReviews($id, $request->user()->id);
 

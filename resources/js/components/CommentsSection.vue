@@ -1,44 +1,48 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed } from 'vue';
+import { usePage } from '@inertiajs/vue3';
 
-const reviews = ref([
-  {
-    id: 1,
-    name: 'Maria Santos',
-    avatar: 'https://i.pravatar.cc/150?img=1',
-    rating: 5,
-    date: 'December 2024',
-    comment: 'Absolutely breathtaking! The beaches are pristine and the locals are so welcoming. Paradise Cove Resort exceeded all our expectations.',
-    location: 'Manila, Philippines'
-  },
-  {
-    id: 2,
-    name: 'John Torres',
-    avatar: 'https://i.pravatar.cc/150?img=12',
-    rating: 5,
-    date: 'November 2024',
-    comment: 'Hidden Falls is a must-visit! The trek was worth every step. The natural beauty of Babatngon is truly underrated.',
-    location: 'Cebu City, Philippines'
-  },
-  {
-    id: 3,
-    name: 'Lisa Chen',
-    avatar: 'https://i.pravatar.cc/150?img=5',
-    rating: 4,
-    date: 'October 2024',
-    comment: 'Amazing snorkeling at Coral Bay! Saw so many colorful fish and corals. The water is crystal clear. Highly recommend!',
-    location: 'Singapore'
-  },
-  {
-    id: 4,
-    name: 'Miguel Reyes',
-    avatar: 'https://i.pravatar.cc/150?img=13',
-    rating: 5,
-    date: 'October 2024',
-    comment: 'Perfect family vacation spot! Blue Lagoon Resort has everything - great food, friendly staff, and amazing beach access.',
-    location: 'Davao City, Philippines'
+interface Review {
+  id: number;
+  name: string;
+  rating: number;
+  date: string;
+  comment: string;
+  location: string;
+  place_name?: string;
+}
+
+interface Props {
+  reviews?: Review[];
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  reviews: () => []
+});
+
+const page = usePage();
+const isAuthenticated = computed(() => !!page.props.auth?.user);
+
+// Use dynamic reviews
+const displayReviews = computed(() => props.reviews);
+const hasReviews = computed(() => displayReviews.value.length > 0);
+
+// Get user initials from name (same as PlaceDetails)
+const getUserInitials = (name: string): string => {
+  return name
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+};
+
+const handleExploreClick = (event: MouseEvent) => {
+  if (!isAuthenticated.value) {
+    event.preventDefault();
+    window.location.href = '/places';
   }
-]);
+};
 </script>
 
 <template>
@@ -55,10 +59,28 @@ const reviews = ref([
         </p>
       </div>
 
+      <!-- Empty State -->
+      <div v-if="!hasReviews" class="text-center py-16">
+        <div class="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
+          <svg class="h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+          </svg>
+        </div>
+        <h3 class="mb-2 text-xl font-semibold text-gray-900 dark:text-white">No Reviews Yet</h3>
+        <p class="text-gray-600 dark:text-gray-400 mb-6">Be the first to share your experience!</p>
+        <a
+          href="/places"
+          @click="handleExploreClick"
+          class="inline-block rounded-lg bg-gradient-to-r from-blue-600 to-teal-500 px-6 py-3 font-semibold text-white transition hover:from-blue-700 hover:to-teal-600 cursor-pointer"
+        >
+          Explore Places and Reviews
+        </a>
+      </div>
+
       <!-- Reviews Grid -->
-      <div class="grid gap-8 md:grid-cols-2">
+      <div v-else class="grid gap-8 md:grid-cols-2">
         <div
-          v-for="review in reviews"
+          v-for="review in displayReviews"
           :key="review.id"
           class="group relative overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-br from-white to-blue-50/50 p-8 shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-gray-700 dark:from-gray-800 dark:to-gray-800/50"
         >
@@ -71,14 +93,11 @@ const reviews = ref([
 
           <!-- Avatar and User Info -->
           <div class="mb-6 flex items-start gap-4">
-            <div class="relative">
-              <img
-                :src="review.avatar"
-                :alt="review.name"
-                class="h-14 w-14 rounded-full object-cover ring-4 ring-blue-100 transition-transform duration-300 group-hover:scale-110 dark:ring-blue-900"
-              />
-              <!-- Online Badge -->
-              <div class="absolute bottom-0 right-0 h-4 w-4 rounded-full border-2 border-white bg-green-500 dark:border-gray-800"></div>
+            <!-- Avatar with Initials - Same as PlaceDetails -->
+            <div class="relative flex-shrink-0">
+              <div class="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-teal-400 to-blue-500 text-white font-bold text-lg shadow-lg ring-4 ring-white dark:ring-gray-800 transition-transform duration-300 group-hover:scale-110">
+                {{ getUserInitials(review.name) }}
+              </div>
             </div>
             
             <div class="flex-1">
@@ -92,6 +111,9 @@ const reviews = ref([
                 </svg>
                 <span>{{ review.location }}</span>
               </div>
+              <p v-if="review.place_name" class="mt-1 text-xs text-teal-600 dark:text-teal-400 font-medium">
+                 {{ review.place_name }}
+              </p>
             </div>
           </div>
 
@@ -125,6 +147,16 @@ const reviews = ref([
         </div>
       </div>
 
+      <!-- View All Reviews Button -->
+      <div v-if="hasReviews" class="mt-12 text-center">
+        <a
+          href="/places"
+          @click="handleExploreClick"
+          class="inline-block rounded-lg bg-gradient-to-r from-blue-600 to-teal-500 px-6 py-3 font-semibold text-white transition hover:from-blue-700 hover:to-teal-600 hover:shadow-lg cursor-pointer"
+        >
+          Explore Places and Reviews
+        </a>
+      </div>
     </div>
   </section>
 </template>

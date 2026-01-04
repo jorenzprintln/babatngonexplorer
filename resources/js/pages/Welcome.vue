@@ -7,14 +7,39 @@ import CommentsSection from '@/components/CommentsSection.vue';
 import Footer from '@/components/Footer.vue';
 import { computed } from 'vue';
 
-withDefaults(
-    defineProps<{
-        canRegister: boolean;
-    }>(),
-    {
-        canRegister: true,
-    },
-);
+interface Place {
+    id: number;
+    name: string;
+    description: string;
+    location: string;
+    image: string;
+    rating: number;
+    type: string;
+    reviewCount: number;
+}
+
+interface Review {
+    id: number;
+    name: string;
+    avatar: string;
+    rating: number;
+    date: string;
+    comment: string;
+    location: string;
+    place_name?: string;
+}
+
+interface Props {
+    canRegister: boolean;
+    places: Place[];
+    reviews: Review[];
+}
+
+const props = withDefaults(defineProps<Props>(), {
+    canRegister: true,
+    places: () => [],
+    reviews: () => [],
+});
 
 const page = usePage();
 const isAuthenticated = computed(() => !!page.props.auth?.user);
@@ -81,8 +106,8 @@ const reloadPage = () => {
         <!-- Main Content -->
         <main>
             <HeroSection />
-            <ResortCards />
-            <CommentsSection />
+            <ResortCards :places="places" />
+            <CommentsSection :reviews="reviews" />
         </main>
 
         <!-- Footer -->

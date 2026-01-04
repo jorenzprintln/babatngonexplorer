@@ -6,19 +6,23 @@ use Laravel\Fortify\Features;
 use App\Http\Controllers\PlaceController;
 use App\Http\Controllers\SavedPlaceController;
 use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\WelcomeController;
+use App\Http\Controllers\DashboardController;
+use App\Models\Review;
+use Illuminate\Support\Facades\Storage;
 
-Route::get('/', function () {
-    return Inertia::render('Welcome', [
-        'canRegister' => Features::enabled(Features::registration()),
-    ]);
-})->name('home');
+// Welcome page with dynamic places and reviews
+Route::get('/', [WelcomeController::class, 'index'])->name('home');
 
-Route::get('dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+// Dashboard with dynamic stats
+Route::get('dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
 
-// Public route - anyone can browse places
-Route::get('/places', [PlaceController::class, 'index'])->name('places.index');
+// Public route that redirects to login if not authenticated
+Route::get('/places', [PlaceController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('places.index');
 
 // Protected route - must be authenticated to view place details
 Route::get('/places/{id}', [PlaceController::class, 'show'])

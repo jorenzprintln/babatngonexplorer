@@ -271,7 +271,7 @@ const prevViewerPhoto = (): void => {
                                             Reviewed on {{ formatDate(review.created_at) }}
                                         </p>
                                         <p v-if="review.reports_count > 0" class="mt-1 text-sm text-red-600 dark:text-red-400">
-                                            ⚠️ This review has {{ review.reports_count }} {{ review.reports_count === 1 ? 'report' : 'reports' }}
+                                             This review has {{ review.reports_count }} {{ review.reports_count === 1 ? 'report' : 'reports' }}
                                         </p>
                                     </div>
                                     <button

@@ -12,6 +12,8 @@ use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
+use Laravel\Fortify\Contracts\LoginResponse;
+use Laravel\Fortify\Contracts\RegisterResponse;
 
 class FortifyServiceProvider extends ServiceProvider
 {
@@ -20,7 +22,27 @@ class FortifyServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Custom login response to handle intended URL
+        $this->app->singleton(LoginResponse::class, function () {
+            return new class implements LoginResponse {
+                public function toResponse($request)
+                {
+                    // This will redirect to the intended URL or dashboard
+                    return redirect()->intended(route('dashboard'));
+                }
+            };
+        });
+
+        // Custom register response to handle intended URL
+        $this->app->singleton(RegisterResponse::class, function () {
+            return new class implements RegisterResponse {
+                public function toResponse($request)
+                {
+                    // This will redirect to the intended URL or dashboard after registration
+                    return redirect()->intended(route('dashboard'));
+                }
+            };
+        });
     }
 
     /**
@@ -41,9 +63,10 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
         Fortify::createUsersUsing(CreateNewUser::class);
 
-        Fortify::redirects('login', function () {
-        return redirect()->intended(route('dashboard'));
-    });
+        // Remove or comment out this line since we're using LoginResponse now
+        // Fortify::redirects('login', function () {
+        //     return redirect()->intended(route('dashboard'));
+        // });
     }
 
     /**
