@@ -20,7 +20,7 @@ const props = withDefaults(defineProps<Props>(), {
   reviews: () => []
 });
 
-const page = usePage();
+const page = usePage<{ auth?: { user?: any } }>();
 const isAuthenticated = computed(() => !!page.props.auth?.user);
 
 // Use dynamic reviews

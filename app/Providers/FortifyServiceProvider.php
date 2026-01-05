@@ -7,6 +7,7 @@ use App\Actions\Fortify\ResetUserPassword;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -22,23 +23,35 @@ class FortifyServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Custom login response to handle intended URL
+        // Custom login response to handle role-based redirection
         $this->app->singleton(LoginResponse::class, function () {
             return new class implements LoginResponse {
                 public function toResponse($request)
                 {
-                    // This will redirect to the intended URL or dashboard
+                    $user = Auth::user();
+                    
+                    // Check if user is authenticated and is admin
+                    if ($user && $user->role === 'admin') {
+                        return redirect()->intended(route('admin.dashboard'));
+                    }
+                    
                     return redirect()->intended(route('dashboard'));
                 }
             };
         });
 
-        // Custom register response to handle intended URL
+        // Custom register response to handle role-based redirection
         $this->app->singleton(RegisterResponse::class, function () {
             return new class implements RegisterResponse {
                 public function toResponse($request)
                 {
-                    // This will redirect to the intended URL or dashboard after registration
+                    $user = Auth::user();
+                    
+                    // Redirect based on user role (though new registrations are usually 'user')
+                    if ($user && $user->role === 'admin') {
+                        return redirect()->intended(route('admin.dashboard'));
+                    }
+                    
                     return redirect()->intended(route('dashboard'));
                 }
             };
@@ -62,11 +75,6 @@ class FortifyServiceProvider extends ServiceProvider
     {
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
         Fortify::createUsersUsing(CreateNewUser::class);
-
-        // Remove or comment out this line since we're using LoginResponse now
-        // Fortify::redirects('login', function () {
-        //     return redirect()->intended(route('dashboard'));
-        // });
     }
 
     /**

@@ -23,11 +23,16 @@ class DashboardController extends Controller
      * Display the user dashboard
      */
     public function index(Request $request)
-    {
-        $user = Auth::user();
-        
-        // Get stats
-        $savedPlacesCount = SavedPlace::where('user_id', $user->id)->count();
+{
+    $user = Auth::user();
+    
+    // Redirect admins to admin dashboard
+    if ($user->role === 'admin') {
+        return redirect()->route('admin.dashboard');
+    }
+    
+    // Get stats
+    $savedPlacesCount = SavedPlace::where('user_id', $user->id)->count();
         $reviewsCount = Review::where('user_id', $user->id)->count();
         
         // Get recently viewed places (last 4)

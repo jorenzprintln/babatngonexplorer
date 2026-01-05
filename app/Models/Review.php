@@ -17,6 +17,7 @@ class Review extends Model
         'rating',
         'comment',
         'photos',
+        'status',
     ];
 
     protected $casts = [
@@ -26,12 +27,30 @@ class Review extends Model
         'updated_at' => 'datetime',
     ];
 
+    protected $appends = ['place'];
+
     /**
      * Get the user that wrote the review
      */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Scope to get only approved reviews
+     */
+    public function scopeApproved($query)
+    {
+        return $query->where('status', 'approved');
+    }
+
+    /**
+     * Scope to get only pending reviews
+     */
+    public function scopePending($query)
+    {
+        return $query->where('status', 'pending');
     }
 
     /**

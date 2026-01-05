@@ -10,6 +10,16 @@ use App\Http\Controllers\WelcomeController;
 use App\Http\Controllers\DashboardController;
 use App\Models\Review;
 use Illuminate\Support\Facades\Storage;
+use App\Http\Controllers\Admin\AdminDashboardController;
+use Laravel\Fortify\Http\Controllers\AuthenticatedSessionController;
+
+// Logout route - works for both regular users and admins
+Route::post('/logout', function (Illuminate\Http\Request $request) {
+    Auth::guard('web')->logout();
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+    return redirect('/');
+})->middleware('auth')->name('logout');
 
 // Welcome page with dynamic places and reviews
 Route::get('/', [WelcomeController::class, 'index'])->name('home');
@@ -43,6 +53,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/places/{id}/reviews', [PlaceController::class, 'storeReview'])->name('places.reviews.store');
     Route::post('/reviews/{reviewId}/report', [PlaceController::class, 'reportReview'])->name('reviews.report');
     Route::delete('/reviews/{id}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
+});
+
+Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    // Admin Dashboard
+    Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+    
+    // TODO: Add these routes as you create the controllers
+    // Route::resource('places', Admin\PlaceController::class);
+    // Route::resource('reviews', Admin\ReviewController::class);
+    // Route::resource('users', Admin\UserController::class);
 });
 
 require __DIR__.'/settings.php';
