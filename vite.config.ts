@@ -3,7 +3,8 @@ import tailwindcss from '@tailwindcss/vite';
 import vue from '@vitejs/plugin-vue';
 import laravel from 'laravel-vite-plugin';
 import { defineConfig } from 'vite';
-import path from 'path'; // <-- add this
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 export default defineConfig({
     plugins: [
@@ -27,7 +28,8 @@ export default defineConfig({
     ],
     resolve: {
         alias: {
-            '@': path.resolve(__dirname, 'resources/js'),
+            '@': path.resolve(__dirname, './resources/js'),
         },
+        extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json', '.vue'],
     },
 });

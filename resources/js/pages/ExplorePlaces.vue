@@ -2,11 +2,11 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, router, Link } from '@inertiajs/vue3';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItemType } from '@/types';
 import { dashboard } from '@/routes';
 import axios from 'axios';
 
-const breadcrumbs: BreadcrumbItem[] = [
+const breadcrumbs: BreadcrumbItemType[] = [
   {
     title: 'Dashboard',
     href: dashboard().url,

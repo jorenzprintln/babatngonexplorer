@@ -1,7 +1,6 @@
-import { InertiaLinkProps } from '@inertiajs/vue3';
-import type { LucideIcon } from 'lucide-vue-next';
-import { Config } from 'ziggy-js';
+import type { Config } from 'ziggy-js';
 
+// User Types
 export interface User {
     id: number;
     name: string;
@@ -17,6 +16,7 @@ export interface Auth {
     user: User;
 }
 
+// Place Types
 export interface Place {
     id: number;
     name: string;
@@ -33,6 +33,7 @@ export interface Place {
     updated_at: string;
 }
 
+// Review Types
 export interface Review {
     id: number;
     user_id: number;
@@ -46,59 +47,61 @@ export interface Review {
     place?: Place;
 }
 
-export interface BreadcrumbItem {
+// Navigation Types
+export interface BreadcrumbItemType {
     title: string;
     href: string;
 }
 
 export interface NavItem {
     title: string;
-    href: NonNullable<InertiaLinkProps['href']>;
-    icon?: LucideIcon;
+    href: string;
+    icon?: any;
     isActive?: boolean;
+    items?: {
+        title: string;
+        href: string;
+    }[];
 }
 
-export type BreadcrumbItemType = BreadcrumbItem;
-
-// Main PageProps type
-export type PageProps<
-    T extends Record<string, unknown> = Record<string, unknown>,
-> = T & {
+// Page Props Types
+export type PageProps<T extends Record<string, unknown> = Record<string, unknown>> = T & {
     auth: {
         user: User;
     };
     ziggy?: Config & { location: string };
 };
 
-// App-specific PageProps (if you need additional props)
-export type AppPageProps<
-    T extends Record<string, unknown> = Record<string, unknown>,
-> = PageProps<T> & {
+export type AppPageProps = PageProps & {
     name?: string;
     quote?: { message: string; author: string };
     sidebarOpen?: boolean;
 };
 
-// Global declarations
-declare global {
-    interface Window {
-        route: (
-            name?: string,
-            params?: Record<string, any> | any,
-            absolute?: boolean
-        ) => string & {
-            current(name?: string): boolean;
-        };
-    }
+// Dashboard Specific Types
+export interface DashboardStats {
+    total_places: number;
+    total_reviews: number;
+    total_users: number;
+    pending_reviews: number;
+}
 
-    // Global route helper
-    function route(
-        name?: string,
-        params?: Record<string, any> | any,
-        absolute?: boolean
-    ): string;
+export interface DashboardPlace {
+    id: number;
+    name: string;
+    location: string;
+    created_at: string;
+}
 
-    function route(): {
-        current(name?: string): boolean;
+export interface DashboardReview {
+    id: number;
+    comment: string;
+    rating: number;
+    user: {
+        name: string;
     };
+    place: {
+        name: string;
+    };
+    created_at: string;
 }

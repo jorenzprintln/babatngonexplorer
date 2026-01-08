@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import AdminSidebarLayout from '@/layouts/app/AdminSidebarLayout.vue';
+import AdminLayout from '@/layouts/app/AdminSidebarLayout.vue';
 import { Head } from '@inertiajs/vue3';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import type { BreadcrumbItemType } from '@/types';
 
 interface Stats {
     total_places: number;
@@ -35,6 +36,25 @@ const props = defineProps<{
     recentPlaces: Place[];
     recentReviews: Review[];
 }>();
+
+// Safe route helper
+const getRoute = (name: string): string => {
+    if (typeof window !== 'undefined' && typeof window.route === 'function') {
+        try {
+            return window.route(name);
+        } catch {
+            return '/admin/dashboard';
+        }
+    }
+    return '/admin/dashboard';
+};
+
+const breadcrumbs: BreadcrumbItemType[] = [
+    {
+        title: 'Dashboard',
+        href: getRoute('admin.dashboard'),
+    },
+];
 
 // Time-based greeting and background
 const currentTime = ref(new Date());
@@ -148,7 +168,7 @@ const statsCards = computed(() => [
         <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
     </Head>
 
-    <AdminSidebarLayout>
+    <AdminLayout :breadcrumbs="breadcrumbs">
         <div class="min-h-screen bg-gradient-to-b from-gray-50 to-blue-50 p-4 md:p-8 dark:from-gray-900 dark:to-gray-950" style="font-family: 'Poppins', sans-serif;">
             <div class="mx-auto max-w-7xl space-y-8">
                 
@@ -346,5 +366,5 @@ const statsCards = computed(() => [
 
             </div>
         </div>
-    </AdminSidebarLayout>
+    </AdminLayout>
 </template>
