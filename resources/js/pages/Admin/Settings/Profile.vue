@@ -1,16 +1,13 @@
 <script setup lang="ts">
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
-import { edit } from '@/routes/profile';
 import { send } from '@/routes/verification';
 import { Form, Head, Link, usePage } from '@inertiajs/vue3';
 
-import DeleteUser from '@/components/DeleteUser.vue';
 import HeadingSmall from '@/components/HeadingSmall.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import AppLayout from '@/layouts/AppLayout.vue';
 import AdminSidebarLayout from '@/layouts/app/AdminSidebarLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { type BreadcrumbItem } from '@/types';
@@ -26,11 +23,6 @@ defineProps<Props>();
 const page = usePage();
 const user = page.props.auth.user;
 
-// Check if user is admin by checking the current URL
-const isAdminContext = computed(() => {
-    return page.url.startsWith('/admin');
-});
-
 // Helper to safely get routes
 const getRoute = (name: string): string => {
     if (typeof window !== 'undefined' && typeof window.route === 'function') {
@@ -43,37 +35,27 @@ const getRoute = (name: string): string => {
     return '#';
 };
 
-// Dynamic breadcrumbs based on context
-const breadcrumbItems = computed<BreadcrumbItem[]>(() => {
-    if (isAdminContext.value) {
-        return [
-            {
-                title: 'Admin Dashboard',
-                href: getRoute('admin.dashboard'),
-            },
-            {
-                title: 'Settings',
-                href: getRoute('admin.settings'),
-            },
-            {
-                title: 'Profile',
-                href: getRoute('admin.profile.edit'),
-            },
-        ];
-    }
-    return [
-        {
-            title: 'Profile settings',
-            href: edit().url,
-        },
-    ];
-});
+// Admin breadcrumbs
+const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
+    {
+        title: 'Admin Dashboard',
+        href: getRoute('admin.dashboard'),
+    },
+    {
+        title: 'Settings',
+        href: getRoute('admin.settings'),
+    },
+    {
+        title: 'Profile',
+        href: getRoute('admin.profile.edit'),
+    },
+]);
 </script>
 
 <template>
     <Head title="Profile settings" />
 
-    <component :is="isAdminContext ? AdminSidebarLayout : AppLayout" :breadcrumbs="breadcrumbItems">
+    <AdminSidebarLayout :breadcrumbs="breadcrumbItems">
         <SettingsLayout>
             <div class="flex flex-col space-y-6">
                 <HeadingSmall
@@ -159,8 +141,6 @@ const breadcrumbItems = computed<BreadcrumbItem[]>(() => {
                     </div>
                 </Form>
             </div>
-
-            <DeleteUser />
         </SettingsLayout>
-    </component>
+    </AdminSidebarLayout>
 </template>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AppContent from '@/components/AppContent.vue';
 import AppShell from '@/components/AppShell.vue';
-import AdminSidebar from '@/components/AdminSidebar.vue';
+import AppSidebarAdmin from '@/components/AppSidebarAdmin.vue'
 import AdminSidebarHeader from '@/components/AdminSidebarHeader.vue';
 import type { BreadcrumbItemType } from '@/types';
 
@@ -16,7 +16,7 @@ withDefaults(defineProps<Props>(), {
 
 <template>
     <AppShell variant="sidebar">
-        <AdminSidebar />
+        <AppSidebarAdmin />
         <AppContent variant="sidebar" class="overflow-x-hidden">
             <AdminSidebarHeader :breadcrumbs="breadcrumbs" />
             <slot />

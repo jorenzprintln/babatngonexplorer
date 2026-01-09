@@ -14,6 +14,11 @@ use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use Laravel\Fortify\Http\Controllers\AuthenticatedSessionController;
 
+// Add these imports
+use App\Http\Controllers\Settings\AdminProfileController;
+use App\Http\Controllers\Settings\AdminPasswordController;
+use App\Http\Controllers\Settings\AdminTwoFactorController;
+use App\Http\Controllers\Settings\AdminAppearanceController;
 // Logout route - works for both regular users and admins
 Route::post('/logout', function (Illuminate\Http\Request $request) {
     Auth::guard('web')->logout();
@@ -56,14 +61,31 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/reviews/{id}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
 });
 
-Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.')->group(function () {
-    // Admin Dashboard
+// Admin Routes
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    // Dashboard
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
     
-    // TODO: Add these routes as you create the controllers
-    // Route::resource('places', Admin\PlaceController::class);
-    // Route::resource('reviews', Admin\ReviewController::class);
-    // Route::resource('users', Admin\UserController::class);
+    // Settings Routes
+    Route::prefix('settings')->group(function () {
+        // Profile
+        Route::get('/profile', [AdminProfileController::class, 'edit'])->name('profile.edit');
+        Route::patch('/profile', [AdminProfileController::class, 'update'])->name('profile.update');
+        
+        // Password
+        Route::get('/password', [AdminPasswordController::class, 'edit'])->name('password.edit');
+        Route::put('/password', [AdminPasswordController::class, 'update'])->name('password.update');
+        
+        // Two-Factor Authentication
+        Route::get('/two-factor', [AdminTwoFactorController::class, 'show'])->name('two-factor.show');
+        Route::post('/two-factor', [AdminTwoFactorController::class, 'store'])->name('two-factor.store');
+        Route::delete('/two-factor', [AdminTwoFactorController::class, 'destroy'])->name('two-factor.destroy');
+        
+        // Appearance
+        Route::get('/appearance', [AdminAppearanceController::class, 'edit'])->name('appearance.edit');
+        Route::patch('/appearance', [AdminAppearanceController::class, 'update'])->name('appearance.update');
+    });
 });
 
+require __DIR__.'/settings.php';
 require __DIR__.'/settings.php';

@@ -1,6 +1,8 @@
-import type { Config } from 'ziggy-js';
+import type { ZiggyConfig } from './ziggy';
 
+// ============================================
 // User Types
+// ============================================
 export interface User {
     id: number;
     name: string;
@@ -16,7 +18,9 @@ export interface Auth {
     user: User;
 }
 
+// ============================================
 // Place Types
+// ============================================
 export interface Place {
     id: number;
     name: string;
@@ -33,7 +37,9 @@ export interface Place {
     updated_at: string;
 }
 
+// ============================================
 // Review Types
+// ============================================
 export interface Review {
     id: number;
     user_id: number;
@@ -47,7 +53,9 @@ export interface Review {
     place?: Place;
 }
 
+// ============================================
 // Navigation Types
+// ============================================
 export interface BreadcrumbItemType {
     title: string;
     href: string;
@@ -64,12 +72,14 @@ export interface NavItem {
     }[];
 }
 
+// ============================================
 // Page Props Types
+// ============================================
 export type PageProps<T extends Record<string, unknown> = Record<string, unknown>> = T & {
     auth: {
         user: User;
     };
-    ziggy?: Config & { location: string };
+    ziggy?: ZiggyConfig & { location: string };
 };
 
 export type AppPageProps = PageProps & {
@@ -78,7 +88,9 @@ export type AppPageProps = PageProps & {
     sidebarOpen?: boolean;
 };
 
+// ============================================
 // Dashboard Specific Types
+// ============================================
 export interface DashboardStats {
     total_places: number;
     total_reviews: number;

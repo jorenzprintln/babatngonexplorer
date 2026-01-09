@@ -1,3 +1,4 @@
+
 <script setup lang="ts">
 import AdminLayout from '@/layouts/app/AdminSidebarLayout.vue';
 import { Head } from '@inertiajs/vue3';
@@ -52,10 +53,9 @@ const getRoute = (name: string): string => {
 const breadcrumbs: BreadcrumbItemType[] = [
     {
         title: 'Dashboard',
-        href: getRoute('admin.dashboard'),
+        href: route('admin.dashboard'),
     },
 ];
-
 // Time-based greeting and background
 const currentTime = ref(new Date());
 const greeting = computed(() => {

@@ -8,28 +8,47 @@ import { edit as editProfile } from '@/routes/profile';
 import { show } from '@/routes/two-factor';
 import { edit as editPassword } from '@/routes/user-password';
 import { type NavItem } from '@/types';
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
-const sidebarNavItems: NavItem[] = [
-    {
-        title: 'Profile',
-        href: editProfile(),
-    },
-    {
-        title: 'Password',
-        href: editPassword(),
-    },
-    {
-        title: 'Two-Factor Auth',
-        href: show(),
-    },
-    {
-        title: 'Appearance',
-        href: editAppearance(),
-    },
-];
+const page = usePage();
 
-const currentPath = typeof window !== undefined ? window.location.pathname : '';
+// Helper to convert RouteDefinition to string
+const routeToString = (routeDef: any): string => {
+    if (typeof routeDef === 'string') {
+        return routeDef;
+    }
+    // If it's a RouteDefinition object, convert it to URL string
+    if (routeDef && typeof routeDef === 'object') {
+        return routeDef.url || routeDef.href || routeDef.path || String(routeDef);
+    }
+    return String(routeDef);
+};
+
+// User sidebar items - always use user routes
+const sidebarNavItems = computed<NavItem[]>(() => {
+    return [
+        {
+            title: 'Profile',
+            href: routeToString(editProfile()),
+        },
+        {
+            title: 'Password',
+            href: routeToString(editPassword()),
+        },
+        {
+            title: 'Two-Factor Auth',
+            href: routeToString(show()),
+        },
+        {
+            title: 'Appearance',
+            href: routeToString(editAppearance()),
+        },
+    ];
+});
+
+// Use page.url for current path which updates reactively with Inertia navigation
+const currentPath = computed(() => page.url);
 </script>
 
 <template>
@@ -44,7 +63,7 @@ const currentPath = typeof window !== undefined ? window.location.pathname : '';
                 <nav class="flex flex-col space-y-1 space-x-0">
                     <Button
                         v-for="item in sidebarNavItems"
-                        :key="toUrl(item.href)"
+                        :key="item.href"
                         variant="ghost"
                         :class="[
                             'w-full justify-start',
@@ -53,7 +72,7 @@ const currentPath = typeof window !== undefined ? window.location.pathname : '';
                         as-child
                     >
                         <Link :href="item.href">
-                            <component :is="item.icon" class="h-4 w-4" />
+                            <component v-if="item.icon" :is="item.icon" class="h-4 w-4" />
                             {{ item.title }}
                         </Link>
                     </Button>
