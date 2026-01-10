@@ -1,7 +1,6 @@
-
 <script setup lang="ts">
 import AdminLayout from '@/layouts/app/AdminSidebarLayout.vue';
-import { Head } from '@inertiajs/vue3';
+import { Head, usePage } from '@inertiajs/vue3';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import type { BreadcrumbItemType } from '@/types';
 
@@ -38,6 +37,10 @@ const props = defineProps<{
     recentReviews: Review[];
 }>();
 
+// Get authenticated user
+const page = usePage();
+const user = computed(() => page.props.auth.user);
+
 // Safe route helper
 const getRoute = (name: string): string => {
     if (typeof window !== 'undefined' && typeof window.route === 'function') {
@@ -56,6 +59,7 @@ const breadcrumbs: BreadcrumbItemType[] = [
         href: route('admin.dashboard'),
     },
 ];
+
 // Time-based greeting and background
 const currentTime = ref(new Date());
 const greeting = computed(() => {
@@ -63,6 +67,12 @@ const greeting = computed(() => {
     if (hour >= 5 && hour < 12) return 'Good Morning';
     if (hour >= 12 && hour < 18) return 'Good Afternoon';
     return 'Good Evening';
+});
+
+// Get first name from full name
+const adminFirstName = computed(() => {
+    if (!user.value?.name) return 'Admin';
+    return user.value.name.split(' ')[0];
 });
 
 const timeOfDay = computed(() => {
@@ -178,10 +188,10 @@ const statsCards = computed(() => [
                     class="rounded-2xl p-8 shadow-2xl transition-all duration-1000 relative overflow-hidden"
                 >
                     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 relative z-10">
-                        <!-- Left side - Greeting -->
+                        <!-- Left side - Greeting with Dynamic Name -->
                         <div>
                             <h1 :class="['mb-2 text-3xl font-bold md:text-4xl drop-shadow-lg', textColor]">
-                                {{ greeting }}, Admin
+                                {{ greeting }}, {{ adminFirstName }}
                             </h1>
                             <p :class="['text-lg drop-shadow-md', dateColor]">
                                 Monitor and manage your platform activities

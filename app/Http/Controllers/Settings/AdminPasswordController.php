@@ -3,9 +3,8 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
@@ -18,26 +17,23 @@ class AdminPasswordController extends Controller
      */
     public function edit(): Response
     {
-        return Inertia::render('Admin/Settings/Password/Edit');
+        return Inertia::render('Admin/Settings/Password');
     }
 
     /**
      * Update the admin password.
      */
-    public function update(Request $request)
+    public function update(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'current_password' => ['required', 'current_password'],
             'password' => ['required', 'confirmed', Password::defaults()],
         ]);
 
-        /** @var User $user */
-        $user = Auth::user();
-        $user->update([
+        $request->user()->update([
             'password' => Hash::make($validated['password']),
         ]);
 
-        return redirect()->route('admin.password.edit')
-            ->with('success', 'Password updated successfully.');
+        return back();
     }
 }

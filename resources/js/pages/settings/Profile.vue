@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
-import AdminSidebarLayout from '@/layouts/app/AdminSidebarLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { computed } from 'vue';
@@ -26,54 +25,19 @@ defineProps<Props>();
 const page = usePage();
 const user = page.props.auth.user;
 
-// Check if user is admin by checking the current URL
-const isAdminContext = computed(() => {
-    return page.url.startsWith('/admin');
-});
-
-// Helper to safely get routes
-const getRoute = (name: string): string => {
-    if (typeof window !== 'undefined' && typeof window.route === 'function') {
-        try {
-            return window.route(name);
-        } catch {
-            return '#';
-        }
-    }
-    return '#';
-};
-
-// Dynamic breadcrumbs based on context
-const breadcrumbItems = computed<BreadcrumbItem[]>(() => {
-    if (isAdminContext.value) {
-        return [
-            {
-                title: 'Admin Dashboard',
-                href: getRoute('admin.dashboard'),
-            },
-            {
-                title: 'Settings',
-                href: getRoute('admin.settings'),
-            },
-            {
-                title: 'Profile',
-                href: getRoute('admin.profile.edit'),
-            },
-        ];
-    }
-    return [
-        {
-            title: 'Profile settings',
-            href: edit().url,
-        },
-    ];
-});
+// User breadcrumbs
+const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
+    {
+        title: 'Profile settings',
+        href: edit().url,
+    },
+]);
 </script>
 
 <template>
     <Head title="Profile settings" />
 
-    <component :is="isAdminContext ? AdminSidebarLayout : AppLayout" :breadcrumbs="breadcrumbItems">
+    <AppLayout :breadcrumbs="breadcrumbItems">
         <SettingsLayout>
             <div class="flex flex-col space-y-6">
                 <HeadingSmall
@@ -162,5 +126,5 @@ const breadcrumbItems = computed<BreadcrumbItem[]>(() => {
 
             <DeleteUser />
         </SettingsLayout>
-    </component>
+    </AppLayout>
 </template>

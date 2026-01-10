@@ -19,7 +19,8 @@ class AdminProfileController extends Controller
     public function edit(): Response
     {
         return Inertia::render('Admin/Settings/Profile', [
-            'user' => Auth::user(),
+            'mustVerifyEmail' => true, // Add this prop
+            'status' => session('status'), // Add this prop
         ]);
     }
 
@@ -47,9 +48,15 @@ class AdminProfileController extends Controller
             $validated['avatar'] = $request->file('avatar')->store('avatars', 'public');
         }
 
+        // If email changed, reset email verification
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
+        }
+
         $user->update($validated);
 
+        // Return to admin profile edit with status
         return redirect()->route('admin.profile.edit')
-            ->with('success', 'Profile updated successfully.');
+            ->with('status', 'profile-updated');
     }
 }

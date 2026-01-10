@@ -3,73 +3,44 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
-use PragmaRX\Google2FA\Google2FA;
+use Laravel\Fortify\Actions\DisableTwoFactorAuthentication;
+use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
 
 class AdminTwoFactorController extends Controller
 {
     /**
      * Show the two-factor authentication settings.
      */
-    public function show(): Response
+    public function show(Request $request): Response
     {
-        /** @var User $user */
-        $user = Auth::user();
+        $user = $request->user();
         
-        return Inertia::render('Admin/Settings/TwoFactor/Show', [
-            'two_factor_enabled' => !is_null($user->two_factor_secret),
-            'two_factor_confirmed' => !is_null($user->two_factor_confirmed_at),
+        return Inertia::render('Admin/Settings/TwoFactor', [
+            'requiresConfirmation' => config('fortify.features.confirmPassword', false),
+            'twoFactorEnabled' => ! is_null($user->two_factor_secret),
         ]);
     }
 
     /**
-     * Enable two-factor authentication.
+     * Enable two-factor authentication for the user.
      */
-    public function store(Request $request)
+    public function store(Request $request, EnableTwoFactorAuthentication $enable)
     {
-        /** @var User $user */
-        $user = Auth::user();
-        $google2fa = new Google2FA();
+        $enable($request->user());
 
-        $secret = $google2fa->generateSecretKey();
-        $qrCodeUrl = $google2fa->getQRCodeUrl(
-            config('app.name'),
-            $user->email,
-            $secret
-        );
-
-        $user->update([
-            'two_factor_secret' => encrypt($secret),
-        ]);
-
-        return redirect()->route('admin.two-factor.show')
-            ->with('qr_code', $qrCodeUrl)
-            ->with('secret', $secret)
-            ->with('success', 'Two-factor authentication has been enabled.');
+        return back()->with('status', 'two-factor-authentication-enabled');
     }
 
     /**
-     * Disable two-factor authentication.
+     * Disable two-factor authentication for the user.
      */
-    public function destroy(Request $request)
+    public function destroy(Request $request, DisableTwoFactorAuthentication $disable)
     {
-        $request->validate([
-            'password' => ['required', 'current_password'],
-        ]);
+        $disable($request->user());
 
-        /** @var User $user */
-        $user = Auth::user();
-        $user->update([
-            'two_factor_secret' => null,
-            'two_factor_recovery_codes' => null,
-            'two_factor_confirmed_at' => null,
-        ]);
-
-        return redirect()->route('admin.two-factor.show')
-            ->with('success', 'Two-factor authentication has been disabled.');
+        return back()->with('status', 'two-factor-authentication-disabled');
     }
 }

@@ -1,4 +1,5 @@
 <?php
+
 use App\Http\Middleware\IsAdmin;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
@@ -21,8 +22,10 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
-         $middleware->alias([
+        
+        $middleware->alias([
             'admin' => IsAdmin::class,
+            'password.confirm' => \Illuminate\Auth\Middleware\RequirePassword::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

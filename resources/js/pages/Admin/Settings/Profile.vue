@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import { send } from '@/routes/verification';
-import { Form, Head, Link, usePage } from '@inertiajs/vue3';
+import { useForm, Head, Link, usePage } from '@inertiajs/vue3';
 
 import HeadingSmall from '@/components/HeadingSmall.vue';
 import InputError from '@/components/InputError.vue';
@@ -9,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AdminSidebarLayout from '@/layouts/app/AdminSidebarLayout.vue';
-import SettingsLayout from '@/layouts/settings/Layout.vue';
+import AdminSettingsLayout from '@/layouts/settings/AdminSettingsLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { computed } from 'vue';
 
@@ -23,78 +22,78 @@ defineProps<Props>();
 const page = usePage();
 const user = page.props.auth.user;
 
-// Helper to safely get routes
-const getRoute = (name: string): string => {
-    if (typeof window !== 'undefined' && typeof window.route === 'function') {
-        try {
-            return window.route(name);
-        } catch {
-            return '#';
-        }
-    }
-    return '#';
-};
-
 // Admin breadcrumbs
 const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
     {
         title: 'Admin Dashboard',
-        href: getRoute('admin.dashboard'),
+        href: route('admin.dashboard'),
     },
     {
-        title: 'Settings',
-        href: getRoute('admin.settings'),
-    },
-    {
-        title: 'Profile',
-        href: getRoute('admin.profile.edit'),
+        title: 'Profile Settings',
+        href: route('admin.profile.edit'),
     },
 ]);
+
+// Create form using useForm for admin profile
+const form = useForm({
+    name: user.name || '',
+    email: user.email || '',
+});
+
+const submit = () => {
+    // Submit to ADMIN profile update route using PATCH method
+    form.patch(route('admin.profile.update'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            console.log('Admin profile updated successfully');
+        },
+        onError: (errors) => {
+            console.error('Admin profile update errors:', errors);
+        }
+    });
+};
 </script>
 
 <template>
-    <Head title="Profile settings" />
+    <Head title="Admin Profile Settings" />
 
     <AdminSidebarLayout :breadcrumbs="breadcrumbItems">
-        <SettingsLayout>
+        <AdminSettingsLayout>
             <div class="flex flex-col space-y-6">
                 <HeadingSmall
                     title="Profile information"
                     description="Update your name and email address"
                 />
 
-                <Form
-                    v-bind="ProfileController.update.form()"
-                    class="space-y-6"
-                    v-slot="{ errors, processing, recentlySuccessful }"
-                >
+                <form @submit.prevent="submit" class="space-y-6">
                     <div class="grid gap-2">
                         <Label for="name">Name</Label>
                         <Input
                             id="name"
+                            v-model="form.name"
                             class="mt-1 block w-full"
-                            name="name"
-                            :default-value="user.name"
+                            type="text"
                             required
                             autocomplete="name"
                             placeholder="Full name"
+                            :disabled="form.processing"
                         />
-                        <InputError class="mt-2" :message="errors.name" />
+                        <InputError class="mt-2" :message="form.errors.name" />
                     </div>
 
                     <div class="grid gap-2">
                         <Label for="email">Email address</Label>
                         <Input
                             id="email"
+                            v-model="form.email"
                             type="email"
                             class="mt-1 block w-full"
-                            name="email"
-                            :default-value="user.email"
                             required
                             autocomplete="username"
                             placeholder="Email address"
+                            :disabled="form.processing"
                         />
-                        <InputError class="mt-2" :message="errors.email" />
+                        <InputError class="mt-2" :message="form.errors.email" />
                     </div>
 
                     <div v-if="mustVerifyEmail && !user.email_verified_at">
@@ -102,8 +101,9 @@ const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
                             Your email address is unverified.
                             <Link
                                 :href="send()"
+                                method="post"
                                 as="button"
-                                class="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
+                                class="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current dark:decoration-neutral-500"
                             >
                                 Click here to resend the verification email.
                             </Link>
@@ -120,10 +120,12 @@ const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
 
                     <div class="flex items-center gap-4">
                         <Button
-                            :disabled="processing"
+                            type="submit"
+                            :disabled="form.processing"
                             data-test="update-profile-button"
-                            >Save</Button
                         >
+                            {{ form.processing ? 'Saving...' : 'Save' }}
+                        </Button>
 
                         <Transition
                             enter-active-class="transition ease-in-out"
@@ -132,15 +134,15 @@ const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
                             leave-to-class="opacity-0"
                         >
                             <p
-                                v-show="recentlySuccessful"
-                                class="text-sm text-neutral-600"
+                                v-show="form.recentlySuccessful"
+                                class="text-sm text-green-600 font-medium"
                             >
-                                Saved.
+                                Saved successfully
                             </p>
                         </Transition>
                     </div>
-                </Form>
+                </form>
             </div>
-        </SettingsLayout>
+        </AdminSettingsLayout>
     </AdminSidebarLayout>
 </template>

@@ -14,11 +14,12 @@ use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use Laravel\Fortify\Http\Controllers\AuthenticatedSessionController;
 
-// Add these imports
+// Admin Settings Controllers
 use App\Http\Controllers\Settings\AdminProfileController;
 use App\Http\Controllers\Settings\AdminPasswordController;
 use App\Http\Controllers\Settings\AdminTwoFactorController;
 use App\Http\Controllers\Settings\AdminAppearanceController;
+
 // Logout route - works for both regular users and admins
 Route::post('/logout', function (Illuminate\Http\Request $request) {
     Auth::guard('web')->logout();
@@ -61,13 +62,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/reviews/{id}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
 });
 
-// Admin Routes
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     // Dashboard
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
     
-    // Settings Routes
-    Route::prefix('settings')->group(function () {
+    // Password Confirmation Routes (must be BEFORE settings routes)
+    Route::get('/confirm-password', [ConfirmPasswordController::class, 'show'])
+        ->middleware(['web'])
+        ->name('password.confirm');
+    Route::post('/confirm-password', [ConfirmPasswordController::class, 'store'])
+        ->middleware(['web']);
+    
+    // Settings redirect - redirects to profile as default
+    Route::get('/settings', function () {
+        return redirect()->route('admin.profile.edit');
+    })->name('settings');
+    
+    // Settings Routes - ALL require password confirmation
+    Route::prefix('settings')->middleware(['password.confirm'])->group(function () {
         // Profile
         Route::get('/profile', [AdminProfileController::class, 'edit'])->name('profile.edit');
         Route::patch('/profile', [AdminProfileController::class, 'update'])->name('profile.update');
@@ -81,11 +93,33 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         Route::post('/two-factor', [AdminTwoFactorController::class, 'store'])->name('two-factor.store');
         Route::delete('/two-factor', [AdminTwoFactorController::class, 'destroy'])->name('two-factor.destroy');
         
+        // Two-Factor QR Code
+        Route::get('/two-factor-qr-code', function (Illuminate\Http\Request $request) {
+            return response()->json([
+                'svg' => $request->user()->twoFactorQrCodeSvg(),
+            ]);
+        })->name('two-factor.qr-code');
+        
+        // Two-Factor Recovery Codes
+        Route::get('/two-factor-recovery-codes', function (Illuminate\Http\Request $request) {
+            return response()->json([
+                'codes' => json_decode(decrypt($request->user()->two_factor_recovery_codes), true),
+            ]);
+        })->name('two-factor.recovery-codes');
+        
+        // Two-Factor Confirmation
+        Route::post('/confirmed-two-factor-authentication', function (
+            Illuminate\Http\Request $request,
+            Laravel\Fortify\Actions\ConfirmTwoFactorAuthentication $confirm
+        ) {
+            $confirm($request->user(), $request->input('code'));
+            return back();
+        })->name('two-factor.confirm');
+        
         // Appearance
         Route::get('/appearance', [AdminAppearanceController::class, 'edit'])->name('appearance.edit');
         Route::patch('/appearance', [AdminAppearanceController::class, 'update'])->name('appearance.update');
     });
 });
-
-require __DIR__.'/settings.php';
+// User settings routes - ONLY ONCE at the end
 require __DIR__.'/settings.php';
