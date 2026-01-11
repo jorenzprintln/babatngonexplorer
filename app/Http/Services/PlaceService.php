@@ -267,4 +267,6 @@ class PlaceService
             ->where('user_id', $userId)
             ->exists();
     }
+
+    
 }

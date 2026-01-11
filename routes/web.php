@@ -12,6 +12,10 @@ use App\Http\Controllers\DashboardController;
 use App\Models\Review;
 use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminPlaceController;
+use App\Http\Controllers\Admin\AdminReviewController;
+use App\Http\Controllers\Admin\AdminUserController;
+use App\Http\Controllers\Admin\AdminReportController;
 use Laravel\Fortify\Http\Controllers\AuthenticatedSessionController;
 
 // Admin Settings Controllers
@@ -65,6 +69,31 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     // Dashboard
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+    
+    // Places Management - Full CRUD
+    Route::resource('places', AdminPlaceController::class);
+    Route::post('places/{place}/toggle-status', [AdminPlaceController::class, 'toggleStatus'])->name('places.toggle-status');
+    
+    // Reviews Management
+    Route::resource('reviews', AdminReviewController::class)->only(['index', 'show', 'destroy']);
+    Route::post('reviews/{review}/approve', [AdminReviewController::class, 'approve'])->name('reviews.approve');
+    Route::post('reviews/{review}/reject', [AdminReviewController::class, 'reject'])->name('reviews.reject');
+    Route::patch('reviews/{review}/status', [AdminReviewController::class, 'updateStatus'])->name('reviews.update-status');
+    Route::post('reviews/bulk-delete', [AdminReviewController::class, 'bulkDelete'])->name('reviews.bulk-delete');
+    Route::post('reviews/bulk-update-status', [AdminReviewController::class, 'bulkUpdateStatus'])->name('reviews.bulk-update-status');
+    
+    // Reports Management
+    Route::resource('reports', AdminReportController::class)->only(['index', 'show', 'destroy']);
+    Route::patch('reports/{report}/status', [AdminReportController::class, 'updateStatus'])->name('reports.update-status');
+    Route::post('reports/bulk-update-status', [AdminReportController::class, 'bulkUpdateStatus'])->name('reports.bulk-update-status');
+    Route::post('reports/bulk-delete', [AdminReportController::class, 'bulkDelete'])->name('reports.bulk-delete');
+
+     // Users Management
+    Route::resource('users', AdminUserController::class);
+    Route::post('users/{user}/toggle-role', [AdminUserController::class, 'toggleRole'])->name('users.toggle-role');
+    Route::post('users/{user}/verify-email', [AdminUserController::class, 'verifyEmail'])->name('users.verify-email');
+    Route::post('users/bulk-delete', [AdminUserController::class, 'bulkDelete'])->name('users.bulk-delete');
+    Route::post('users/bulk-update-role', [AdminUserController::class, 'bulkUpdateRole'])->name('users.bulk-update-role');
     
     // Password Confirmation Routes (must be BEFORE settings routes)
     Route::get('/confirm-password', [ConfirmPasswordController::class, 'show'])
@@ -121,5 +150,6 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         Route::patch('/appearance', [AdminAppearanceController::class, 'update'])->name('appearance.update');
     });
 });
+
 // User settings routes - ONLY ONCE at the end
 require __DIR__.'/settings.php';

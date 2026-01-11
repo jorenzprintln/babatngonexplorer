@@ -61,16 +61,18 @@ const dashboardUrl = computed(() => {
                                     <NavLink :href="route('admin.dashboard')" :active="routeCurrent('admin.dashboard')">
                                         Dashboard
                                     </NavLink>
-                                    <!-- Commented out until routes are created -->
-                                    <!-- <NavLink :href="route('admin.places.index')" :active="routeCurrent('admin.places.*')">
+                                    <NavLink :href="route('admin.places.index')" :active="routeCurrent('admin.places.*')">
                                         Places
                                     </NavLink>
                                     <NavLink :href="route('admin.reviews.index')" :active="routeCurrent('admin.reviews.*')">
                                         Reviews
                                     </NavLink>
+                                    <NavLink :href="route('admin.reports.index')" :active="routeCurrent('admin.reports.*')">
+                                        Reports
+                                    </NavLink>
                                     <NavLink :href="route('admin.users.index')" :active="routeCurrent('admin.users.*')">
                                         Users
-                                    </NavLink> -->
+                                    </NavLink>
                                 </template>
                                 <template v-else>
                                     <NavLink :href="route('dashboard')" :active="routeCurrent('dashboard')">
@@ -164,16 +166,18 @@ const dashboardUrl = computed(() => {
                             <ResponsiveNavLink :href="route('admin.dashboard')" :active="routeCurrent('admin.dashboard')">
                                 Dashboard
                             </ResponsiveNavLink>
-                            <!-- Commented out until routes are created -->
-                            <!-- <ResponsiveNavLink :href="route('admin.places.index')" :active="routeCurrent('admin.places.*')">
+                            <ResponsiveNavLink :href="route('admin.places.index')" :active="routeCurrent('admin.places.*')">
                                 Places
                             </ResponsiveNavLink>
                             <ResponsiveNavLink :href="route('admin.reviews.index')" :active="routeCurrent('admin.reviews.*')">
                                 Reviews
                             </ResponsiveNavLink>
+                            <ResponsiveNavLink :href="route('admin.reports.index')" :active="routeCurrent('admin.reports.*')">
+                                Reports
+                            </ResponsiveNavLink>
                             <ResponsiveNavLink :href="route('admin.users.index')" :active="routeCurrent('admin.users.*')">
                                 Users
-                            </ResponsiveNavLink> -->
+                            </ResponsiveNavLink>
                         </template>
                         <template v-else>
                             <ResponsiveNavLink :href="route('dashboard')" :active="routeCurrent('dashboard')">
